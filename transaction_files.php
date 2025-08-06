@@ -115,11 +115,10 @@
   <div class="sidebar">
     <a href="admin_dashboard.php">Dashboard</a>
     <a href="admin_client_request.php">Client Requests</a>
-    <a href="survey_files.php" class="active">Survey Files</a>
     <a href="admin_client_update.php">Client Updates</a>
-    <a href="pending_updates.php">Pending Updates</a>
+    <a href="transation_files.php" class="active">Survey Files</a>
     <a href="admin_chat.php">Client Chat</a>
-    <a href="logout.php">Logout</a>
+    <a href="index.php">Logout</a>
   </div>
 
   <div class="container">

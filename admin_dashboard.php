@@ -148,8 +148,7 @@ try {
   <a href="admin_dashboard.php">Dashboard</a>
   <a href="client_request.php">Client Requests</a>
   <a href="client_updates.php">Client Updates</a>
-  <a href="survey_files.php">Survey Files</a>
-  <a href="pending_updates.php">Pending Updates</a>
+  <a href="transaction_files.php">Survey Files</a>
   <a href="admin_chat.php">Chat</a>
   <a href="index.php">Logout</a>
 </div>

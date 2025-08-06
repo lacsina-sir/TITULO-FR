@@ -133,8 +133,7 @@ $result = $conn->query($sql);
     <a href="admin_dashboard.php">Dashboard</a>
     <a href="admin_client_request.php">Client Requests</a>
     <a href="admin_client_update.php">Client Updates</a>
-    <a href="admin_survey_files.php">Survey Files</a>
-    <a href="admin_client_updates.php" class="active">Pending Updates</a>
+    <a href="transaction_files.php">Survey Files</a>
     <a href="admin_chat.php">Client Chat</a>
     <a href="logout.php">Logout</a>
   </div>

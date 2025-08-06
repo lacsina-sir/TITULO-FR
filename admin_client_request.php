@@ -94,8 +94,7 @@ $result = $conn->query($sql);
         <a href="admin_dashboard.php">Dashboard</a>
         <a href="admin_client_requests.php">Client Requests</a>
         <a href="admin_client_updates.php">Client Updates</a>
-        <a href="admin_survey_files.php">Survey Files</a>
-        <a href="admin_pending_updates.php">Pending Updates</a>
+        <a href="transaction_files.php">Survey Files</a>
         <a href="admin_chat.php">Chat</a>
         <a href="logout.php">Logout</a>
     </div>
