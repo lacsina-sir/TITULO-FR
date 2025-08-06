@@ -1,7 +1,7 @@
 <?php
 // config.php - Database configuration
 $host = 'localhost';
-$dbname = 'compass_north'; // Change this to your database name
+$dbname = 'titulo_db'; // Change this to your database name
 $username = 'root';        // Default XAMPP username
 $password = '';            // Default XAMPP password (empty)
 
