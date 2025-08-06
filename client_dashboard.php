@@ -1,22 +1,13 @@
 <?php
 session_start();
 
-// Check if the client is logged in
-if (!isset($_SESSION['user_id'])) {
-    header("Location: login.php");
+// Redirect if not logged in
+if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'client') {
+    header("Location: index.php");
     exit();
 }
 
-require 'db_connection.php';
-
-// Fetch the client details
-$user_id = $_SESSION['user_id'];
-$stmt = $conn->prepare("SELECT first_name, last_name FROM users WHERE id = ?");
-$stmt->bind_param("i", $user_id);
-$stmt->execute();
-$stmt->bind_result($first_name, $last_name);
-$stmt->fetch();
-$stmt->close();
+$clientName = $_SESSION['first_name'] ?? 'Client';
 ?>
 <!DOCTYPE html>
 <html lang="en">
