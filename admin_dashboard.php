@@ -1,7 +1,7 @@
 <?php
 // Database configuration
 $host = "localhost";
-$dbname = "compass_north";
+$dbname = "titulo";
 $username = "root";
 $password = "";
 
@@ -30,6 +30,7 @@ try {
   // Use default values if queries fail
 }
 ?>
+
 
 <!DOCTYPE html>
 <html lang="en">
