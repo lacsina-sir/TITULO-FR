@@ -607,7 +607,7 @@
             <a href="#services" class="nav-pill">Services</a>
             <a href="#tips" class="nav-pill">Tips</a>
             <a href="#contact" class="nav-pill">Contact</a>
-            <a href="login.php" class="nav-pill">Log In</a>
+            <a href="login_register.php" class="nav-pill">Log In</a>
         </nav>
     </header>
 
