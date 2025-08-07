@@ -125,7 +125,7 @@ if (!$result) {
             <a href="client_dashboard.php" class="nav-pill">Dashboard</a>
             <a href="client_files.php" class="nav-pill">Files</a>
             <a href="client_profile.php" class="nav-pill">Profiles</a>
-            <a href="client_chat.php" class="nav-pill">Chat</a>
+            <a href="client_form.php" class="nav-pill">Forms</a>
             <a href="client_tracking.php" class="nav-pill">Tracking</a>
             <a href="index.php" class="nav-pill">Log Out</a>
         </nav>
