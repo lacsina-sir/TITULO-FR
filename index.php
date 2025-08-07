@@ -378,136 +378,6 @@
             transform: translateY(-2px);
         }
 
-        /* Contact Section */
-        .contact-section {
-            padding: 100px 40px;
-            background: rgba(0, 0, 0, 0.2);
-            backdrop-filter: blur(10px);
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .contact-container {
-            max-width: 800px;
-            margin: 0 auto;
-        }
-
-        .contact-title {
-            text-align: center;
-            font-size: 2.5rem;
-            margin-bottom: 50px;
-            color: #ecf0f1;
-            font-weight: 300;
-        }
-
-        .contact-form {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(20px);
-            padding: 50px 40px;
-            border-radius: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-        }
-
-        .form-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin-bottom: 20px;
-        }
-
-        .form-group {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .form-group.full-width {
-            grid-column: 1 / -1;
-        }
-
-        label {
-            margin-bottom: 8px;
-            font-weight: 500;
-            color: #ecf0f1;
-            font-size: 14px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        input, textarea {
-            padding: 18px 20px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 12px;
-            color: #ecf0f1;
-            font-size: 16px;
-            transition: all 0.3s ease;
-            backdrop-filter: blur(10px);
-        }
-
-        input:focus, textarea:focus {
-            outline: none;
-            border-color: #00ff88;
-            box-shadow: 0 0 20px rgba(0, 255, 136, 0.2);
-            background: rgba(255, 255, 255, 0.08);
-        }
-
-        input::placeholder, textarea::placeholder {
-            color: #7f8c8d;
-        }
-
-        textarea {
-            min-height: 120px;
-            resize: vertical;
-        }
-
-        .submit-btn {
-            width: 100%;
-            padding: 18px;
-            background: linear-gradient(45deg, #00ff88, #00cc6a);
-            color: white;
-            border: none;
-            border-radius: 12px;
-            font-size: 18px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin-top: 20px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .submit-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(0, 255, 136, 0.4);
-        }
-
-        .social-link {
-            display: flex;
-            justify-content: center;
-            margin-top: 30px;
-        }
-
-        .facebook-btn {
-            background: linear-gradient(45deg, #1877f2, #0d5ed4);
-            color: white;
-            padding: 15px;
-            border-radius: 50%;
-            text-decoration: none;
-            font-size: 20px;
-            transition: all 0.3s ease;
-            width: 50px;
-            height: 50px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 4px 15px rgba(24, 119, 242, 0.3);
-        }
-
-        .facebook-btn:hover {
-            transform: scale(1.1);
-            box-shadow: 0 8px 25px rgba(24, 119, 242, 0.4);
-        }
-
         /* Footer */
         .footer {
             text-align: center;
@@ -606,7 +476,6 @@
             <a href="#projects" class="nav-pill">Projects</a>
             <a href="#services" class="nav-pill">Services</a>
             <a href="#tips" class="nav-pill">Tips</a>
-            <a href="#contact" class="nav-pill">Contact</a>
             <a href="login_register.php" class="nav-pill">Log In</a>
         </nav>
     </header>
@@ -710,31 +579,7 @@
     </section>
 
     <!-- Contact Section -->
-    <section id="contact" class="contact-section">
-        <div class="contact-container">
-            <h2 class="contact-title fade-in">Contact <span class="highlight">Us Now!</span></h2>
-            <form class="contact-form fade-in">
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="name">Name</label>
-                        <input type="text" id="name" name="name" required placeholder="Enter your full name">
-                    </div>
-                    <div class="form-group">
-                        <label for="mobile">Mobile Number</label>
-                        <input type="tel" id="mobile" name="mobile" required placeholder="Enter your mobile number">
-                    </div>
-                </div>
-                <div class="form-group full-width">
-                    <label for="message">Message</label>
-                    <textarea id="message" name="message" required placeholder="Enter your message here..."></textarea>
-                </div>
-                <button type="submit" class="submit-btn">Submit</button>
-            </form>
-            <div class="social-link">
-                <a href="#" class="facebook-btn">f</a>
-            </div>
-        </div>
-    </section>
+    
 
     <footer class="footer">
         Copyright 2025 TITULO.
@@ -810,5 +655,9 @@
             });
         }, 300);
     </script>
+    <!-- Botpress Chatbot -->
+    <script src="https://cdn.botpress.cloud/webchat/v3.2/inject.js" defer></script>
+    <script src="https://files.bpcontent.cloud/2025/01/13/15/20250113152019-KCRF9KEX.js" defer></script>
+
 </body>
 </html>
