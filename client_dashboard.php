@@ -10,6 +10,16 @@ if (!isset($_SESSION['user_id'])) {
 // Get first and last name from session
 $first_name = $_SESSION['first_name'] ?? 'Client';
 $last_name = $_SESSION['last_name'] ?? '';
+
+include 'db_connection.php';
+$user_id = $_SESSION['user_id'] ?? 0;
+
+// Fetch submitted forms for this user
+$query = "SELECT * FROM client_forms WHERE user_id = ? ORDER BY created_at DESC";
+$stmt = $conn->prepare($query);
+$stmt->bind_param("i", $user_id);
+$stmt->execute();
+$result = $stmt->get_result();
 ?>
 
 <!DOCTYPE html>
@@ -103,7 +113,7 @@ $last_name = $_SESSION['last_name'] ?? '';
       color: #ccc;
     }
 
-    .updates-section {
+    .updates-section, .form-section {
       display: flex;
       flex-direction: column;
       gap: 20px;
@@ -214,7 +224,7 @@ $last_name = $_SESSION['last_name'] ?? '';
       <a href="client_dashboard.php">Dashboard</a>
       <a href="client_files.php">Files</a>
       <a href="client_profile.php">Profile</a>
-      <a href="client_chat.php">Chats</a>
+      <a href="client_form.php">Forms</a>
       <a href="client-side_tracking.php">Tracking</a>
       <a href="index.php">Logout</a>
     </div>
@@ -243,6 +253,36 @@ $last_name = $_SESSION['last_name'] ?? '';
         <h3>Initial Document Review</h3>
         <p>Status: In Progress<br><small>Last updated: July 29, 2025</small></p>
       </div>
+    </div>
+
+    <!-- New Form Section -->
+    <div class="form-section" style="margin-top:40px;" >
+      <h2 style="color:#00ffcc;margin-bottom:18px;">Your Submitted Forms</h2>
+      <?php if ($result->num_rows > 0): ?>
+        <?php while ($row = $result->fetch_assoc()): ?>
+          <div class="update-card">
+            <h3><?php echo htmlspecialchars($row['type']); ?> Submitted</h3>
+            <p>
+              Status: <span style="color:#ffcc00;font-weight:bold;"><?php echo htmlspecialchars($row['status']); ?></span><br>
+              Date Submitted: <?php echo htmlspecialchars($row['date']); ?>
+            </p>
+            <p>Name: <?php echo htmlspecialchars($row['name'] . ' ' . $row['last_name']); ?></p>
+            <?php if (!empty($row['location'])): ?>
+              <p>Location: <?php echo htmlspecialchars($row['location']); ?></p>
+            <?php endif; ?>
+            <?php if (!empty($row['others_text'])): ?>
+              <p>Details: <?php echo htmlspecialchars($row['others_text']); ?></p>
+            <?php endif; ?>
+            <?php if (!empty($row['file_path'])): ?>
+              <p>File: <a href="<?php echo htmlspecialchars($row['file_path']); ?>" style="color:#00ffcc;" target="_blank">Download</a></p>
+            <?php endif; ?>
+          </div>
+        <?php endwhile; ?>
+      <?php else: ?>
+        <div class="update-card">
+          <h3>No forms submitted yet.</h3>
+        </div>
+      <?php endif; ?>
     </div>
   </div>
 
