@@ -132,6 +132,78 @@ $last_name = $_SESSION['last_name'] ?? '';
       font-size: 14px;
       color: #ccc;
     }
+
+    .chatbot-btn {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 65px;
+    height: 65px;
+    background: #00ffcc;
+    border-radius: 50%;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 2000;
+    transition: box-shadow 0.2s;
+  }
+  .chatbot-btn:hover {
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  }
+  .chatbot-btn svg {
+    width: 32px;
+    height: 32px;
+    fill: #222;
+  }
+  .chatbot-modal {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    right: 40px;
+    width: 370px;
+    height: 500px;
+    background: #222;
+    border-radius: 18px 18px 0 0;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    z-index: 2100;
+    overflow: hidden;
+    flex-direction: column;
+    animation: fadeInUp 0.3s;
+  }
+  .chatbot-modal.active {
+    display: flex;
+  }
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(40px);}
+    to { opacity: 1; transform: translateY(0);}
+  }
+  .chatbot-btn.hide {
+    display: none;
+  }
+  .chatbot-modal-header {
+    background: #00ffcc;
+    color: #222;
+    padding: 12px 18px;
+    font-weight: bold;
+    font-size: 18px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .chatbot-close {
+    cursor: pointer;
+    font-size: 22px;
+    font-weight: bold;
+    color: #222;
+  }
+  .chatbot-iframe {
+    border: none;
+    width: 100%;
+    height: 100%;
+    background: #222;
+  }
   </style>
 </head>
 <body>
@@ -174,6 +246,32 @@ $last_name = $_SESSION['last_name'] ?? '';
     </div>
   </div>
 
+  <div class="chatbot-btn" id="chatbotBtn" title="Chat-Admin">
+    <svg viewBox="0 0 24 24"><path d="M12 3C7.03 3 3 6.58 3 11c0 2.39 1.19 4.54 3.17 6.13L5 21l4.13-1.17C10.73 20.61 11.36 21 12 21c4.97 0 9-3.58 9-8s-4.03-8-9-8zm0 16c-.52 0-1.03-.07-1.52-.19l-.36-.09-2.44.69.69-2.44-.09-.36C6.07 15.03 5 13.13 5 11c0-3.31 3.58-6 8-6s8 2.69 8 6-3.58 6-8 6z"/></svg>
+  </div>
+
+
+  <div class="chatbot-modal" id="chatbotModal">
+    <iframe src="client_chatbot.php" class="chatbot-iframe"></iframe>
+  </div>
+
+  <script>
+  const chatbotBtn = document.getElementById('chatbotBtn');
+  const chatbotModal = document.getElementById('chatbotModal');
+
+  chatbotBtn.onclick = function() {
+    chatbotModal.classList.add('active');
+    chatbotBtn.classList.add('hide');
+  };
+
+  // Listen for close message from iframe
+  window.addEventListener('message', function(event) {
+    if (event.data === 'closeChatbot') {
+      chatbotModal.classList.remove('active');
+      chatbotBtn.classList.remove('hide');
+    }
+  });
+</script>
 </body>
 </html>
 

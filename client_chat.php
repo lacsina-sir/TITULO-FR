@@ -1,6 +1,6 @@
 <?php
 session_start();
-require('db_connection.php'); // Make sure this file exists
+include 'db_connection.php';
 
 // Check if client is logged in
 if (!isset($_SESSION['client_id'])) {
