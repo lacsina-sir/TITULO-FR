@@ -1,25 +1,34 @@
 <?php
 session_start();
-if (!isset($_SESSION['client_id'])) {
-    header("Location: index.php");
-    exit();
-}
 
 include 'db_connection.php';
 
-$client_id = $_SESSION['client_id'];
+if (!$conn) {
+    die("Database connection failed.");
+}
 
 $query = "SELECT * FROM progress_tracker WHERE client_id = ?";
 $stmt = $conn->prepare($query);
+
+if (!$stmt) {
+    die("Prepare failed: " . $conn->error);
+}
+
 $stmt->bind_param("i", $client_id);
 $stmt->execute();
+
 $result = $stmt->get_result();
+
+if (!$result) {
+    die("Query failed: " . $stmt->error);
+}
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Client-Side Tracking</title>
+    <title>Client Tracking</title>
     <style>
         body {
             margin: 0;
@@ -43,7 +52,7 @@ $result = $stmt->get_result();
         }
         .logo {
             font-size: 30px;
-            color: #ffcc00;
+            color: #00ffcc;
             font-weight: bold;
             margin-right: 10px;
         }
@@ -52,6 +61,7 @@ $result = $stmt->get_result();
             font-weight: 600;
             color: #fff;
         }
+        
         .nav-pills {
             display: flex;
             gap: 15px;
@@ -64,7 +74,7 @@ $result = $stmt->get_result();
             transition: background-color 0.3s;
         }
         .nav-pill:hover, .nav-pill.active {
-            background-color: #ffcc00;
+            background-color: #00ffcc;
             color: #000;
         }
         .container {
@@ -80,7 +90,7 @@ $result = $stmt->get_result();
             text-align: center;
             margin-bottom: 30px;
             font-size: 36px;
-            color: #ffcc00;
+            color: #00ffcc;
         }
         table {
             width: 100%;
@@ -112,11 +122,11 @@ $result = $stmt->get_result();
             <div class="title-text">TITULO</div>
         </div>
         <nav class="nav-pills">
-            <a href="client_dashboard.php" class="nav-pill">Home</a>
+            <a href="client_dashboard.php" class="nav-pill">Dashboard</a>
             <a href="client_files.php" class="nav-pill">Files</a>
             <a href="client_profile.php" class="nav-pill">Profiles</a>
             <a href="client_chat.php" class="nav-pill">Chat</a>
-            <a href="client-side_tracking.php" class="nav-pill active">Track</a>
+            <a href="client_tracking.php" class="nav-pill">Tracking</a>
             <a href="index.php" class="nav-pill">Log Out</a>
         </nav>
     </header>

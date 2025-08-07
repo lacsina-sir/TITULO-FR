@@ -143,7 +143,7 @@ $last_name = $_SESSION['last_name'] ?? '';
       <a href="client_files.php">Files</a>
       <a href="client_profile.php">Profile</a>
       <a href="client_chat.php">Chats</a>
-      <a href="client-side_tracking">Tracking</a>
+      <a href="client-side_tracking.php">Tracking</a>
       <a href="index.php">Logout</a>
     </div>
   </div>
