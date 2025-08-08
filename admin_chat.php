@@ -138,12 +138,12 @@ if ($conn) {
 
     <div class="sidebar">
         <h2>TITULO Admin</h2>
-         <a href="admin_dashboard.php">Dashboard</a>
-         <a href="client_request.php">Client Requests</a>
-         <a href="client_updates.php">Client Updates</a>
-         <a href="transaction_files.php">Survey Files</a>
-         <a href="admin_chat.php">Chat</a>
-         <a href="index.php">Logout</a>
+        <a href="admin_dashboard.php">Dashboard</a>
+        <a href="admin_client_request.php">Client Requests</a>
+        <a href="admin_client_updates.php">Client Updates</a>
+        <a href="transaction_files.php">Survey Files</a>
+        <a href="admin_chat.php">Chat</a>
+        <a href="index.php">Logout</a>
     </div>
 
     <div class="main-content">

@@ -1,36 +1,47 @@
 <?php
 // Database configuration
-$host = "localhost";
-$dbname = "titulo_db";
+$host     = "localhost";
+$dbname   = "titulo_db";
 $username = "root";
 $password = "";
 
+session_start();
+
+// Redirect if not logged in
+if (!isset($_SESSION['user_id'])) {
+    header("Location: login.php");
+    exit();
+}
+
 try {
-  $pdo = new PDO("mysql:host=$host;dbname=$dbname", $username, $password);
-  $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    $pdo = new PDO("mysql:host=$host;dbname=$dbname", $username, $password);
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 } catch (PDOException $e) {
-  die("Connection failed: " . $e->getMessage());
+    die("Connection failed: " . $e->getMessage());
 }
 
 // Fetch statistics
-$totalRequests = 0;
+$totalRequests    = 0;
 $surveysCompleted = 0;
 $pendingApprovals = 0;
 
 try {
-  $stmt = $pdo->query("SELECT COUNT(*) FROM client_requests");
-  $totalRequests = $stmt->fetchColumn();
+    // Count all client form submissions
+    $stmt = $pdo->query("SELECT COUNT(*) FROM client_forms");
+    $totalRequests = $stmt->fetchColumn();
 
-  $stmt = $pdo->query("SELECT COUNT(*) FROM survey_files WHERE status = 'Completed'");
-  $surveysCompleted = $stmt->fetchColumn();
+    // Count approved survey files
+    $stmt = $pdo->query("SELECT COUNT(*) FROM survey_files WHERE status = 'Completed'");
+    $surveysCompleted = $stmt->fetchColumn();
 
-  $stmt = $pdo->query("SELECT COUNT(*) FROM client_updates WHERE status = 'Pending'");
-  $pendingApprovals = $stmt->fetchColumn();
+    // Count pending client updates
+    $stmt = $pdo->query("SELECT COUNT(*) FROM admin_client_updates WHERE status = 'Pending'");
+    $pendingApprovals = $stmt->fetchColumn();
+
 } catch (PDOException $e) {
-  // Use default values if queries fail
+    // keep zero defaults on error
 }
 ?>
-
 
 <!DOCTYPE html>
 <html lang="en">
@@ -74,6 +85,11 @@ try {
       color: #fff;
     }
 
+    .sidebar a.active {
+      background-color: #00ffff;
+      color: black;
+    }
+    
     .main {
       margin-left: 220px;
       padding: 30px;
@@ -144,45 +160,45 @@ try {
 </head>
 <body>
 
-<div class="sidebar">
-  <h2>Titulo Admin</h2>
-  <a href="admin_dashboard.php">Dashboard</a>
-  <a href="client_request.php">Client Requests</a>
-  <a href="client_updates.php">Client Updates</a>
-  <a href="transaction_files.php">Survey Files</a>
-  <a href="admin_chat.php">Chat</a>
-  <a href="index.php">Logout</a>
-</div>
-
-<div class="main">
-  <h1>Welcome, Admin</h1>
-
-  <!-- Search Bar -->
-  <div class="search-bar">
-    <form action="search.php" method="GET">
-      <input type="text" name="transaction_id" placeholder="Search by Transaction Number" required />
-      <button type="submit">Search</button>
-    </form>
+  <div class="sidebar">
+    <h2>Titulo Admin</h2>
+    <a href="admin_dashboard.php" class="active">Dashboard</a>
+    <a href="admin_client_request.php">Client Requests</a>
+    <a href="admin_client_updates.php">Client Updates</a>
+    <a href="transaction_files.php">Survey Files</a>
+    <a href="admin_chat.php">Chat</a>
+    <a href="index.php">Logout</a>
   </div>
 
-  <!-- Dashboard Cards -->
-  <div class="cards">
-    <div class="card">
-      <h3>Total Requests</h3>
-      <p><?= $totalRequests ?> this month</p>
+  <div class="main">
+    <h1>Welcome, Admin</h1>
+
+    <!-- Search Bar -->
+    <div class="search-bar">
+      <form action="search.php" method="GET">
+        <input type="text" name="transaction_id" placeholder="Search by Transaction Number" required />
+        <button type="submit">Search</button>
+      </form>
     </div>
 
-    <div class="card">
-      <h3>Surveys Completed</h3>
-      <p><?= $surveysCompleted ?> approved</p>
-    </div>
+    <!-- Dashboard Cards -->
+    <div class="cards">
+      <div class="card">
+        <h3>Total Requests</h3>
+        <p><?= $totalRequests ?> this month</p>
+      </div>
 
-    <div class="card">
-      <h3>Pending Client Approvals</h3>
-      <p><?= $pendingApprovals ?> surveys need confirmation</p>
+      <div class="card">
+        <h3>Surveys Completed</h3>
+        <p><?= $surveysCompleted ?> approved</p>
+      </div>
+
+      <div class="card">
+        <h3>Pending Client Approvals</h3>
+        <p><?= $pendingApprovals ?> surveys need confirmation</p>
+      </div>
     </div>
   </div>
-</div>
 
 </body>
 </html>

@@ -266,7 +266,6 @@ $result = $stmt->get_result();
               Status: <span style="color:#ffcc00;font-weight:bold;"><?php echo htmlspecialchars($row['status']); ?></span><br>
               Date Submitted: <?php echo htmlspecialchars($row['date']); ?>
             </p>
-            <p>Name: <?php echo htmlspecialchars($row['name'] . ' ' . $row['last_name']); ?></p>
             <?php if (!empty($row['location'])): ?>
               <p>Location: <?php echo htmlspecialchars($row['location']); ?></p>
             <?php endif; ?>
