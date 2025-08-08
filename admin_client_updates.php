@@ -21,10 +21,11 @@ $result = $conn->query($sql);
   <title>Pending Updates | Admin Panel</title>
   <style>
     body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: linear-gradient(to bottom, #0f2027, #203a43, #2c5364);
-      color: #fff;
+    margin: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
+    color: #fff;
+    display: flex;
     }
 
     .navbar {
@@ -42,24 +43,32 @@ $result = $conn->query($sql);
 
     .sidebar {
       width: 220px;
+      background-color: #111;
       height: 100vh;
+      padding-top: 20px;
       position: fixed;
-      top: 0;
-      left: 0;
-      background: #111;
-      padding-top: 60px;
-      box-shadow: 2px 0 10px rgba(0, 255, 255, 0.1);
+    }
+
+    .sidebar h2 {
+    text-align: center;
+    margin-bottom: 30px;
+    font-size: 22px;
+    color: #00bcd4;
     }
 
     .sidebar a {
-      display: block;
-      padding: 15px 20px;
-      color: white;
-      text-decoration: none;
-      transition: 0.3s;
+    display: block;
+    padding: 15px 20px;
+    color: #bbb;
+    text-decoration: none;
+    transition: background 0.3s, color 0.3s;
     }
 
-    .sidebar a:hover,
+    .sidebar a:hover {
+      background-color: #333;
+      color: #fff;
+    }
+
     .sidebar a.active {
       background-color: #00ffff;
       color: black;
@@ -69,11 +78,13 @@ $result = $conn->query($sql);
       margin-left: 240px;
       padding: 80px 20px 20px;
     }
-
+        
     h1 {
+      font-size: 28px;
       margin-bottom: 20px;
       border-bottom: 2px solid #00ffff;
       padding-bottom: 10px;
+      color: #fff;
     }
 
     .search-bar input {
@@ -127,20 +138,18 @@ $result = $conn->query($sql);
 </head>
 <body>
 
-  <div class="navbar">Admin Dashboard - Pending Updates</div>
-
   <div class="sidebar">
+    <h2>Titulo Admin</h2>
     <a href="admin_dashboard.php">Dashboard</a>
     <a href="admin_client_request.php">Client Requests</a>
-    <a href="admin_client_update.php">Client Updates</a>
+    <a href="admin_client_update.php" class="active">Client Updates</a>
     <a href="transaction_files.php">Survey Files</a>
-    <a href="admin_chat.php">Client Chat</a>
-    <a href="logout.php">Logout</a>
+    <a href="admin_chat.php">Chat</a>
+    <a href="index.php">Logout</a>
   </div>
 
   <div class="container">
     <h1>Pending Updates</h1>
-
     <div class="search-bar">
       <input type="text" placeholder="Search pending updates...">
     </div>

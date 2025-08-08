@@ -144,8 +144,13 @@
     <div class="sidebar">
         <h2>TITULO Admin</h2>
         <a href="admin_dashboard.php">Dashboard</a>
+<<<<<<< HEAD
         <a href="client_request.php">Client Requests</a>
         <a href="client_updates.php">Client Updates</a>
+=======
+        <a href="admin_client_request.php">Client Requests</a>
+        <a href="admin_client_updates.php">Client Updates</a>
+>>>>>>> e7d746828b0c93d756b627104781753b9d1ebf93
         <a href="transaction_files.php">Survey Files</a>
         <a href="admin_chat.php">Chat</a>
         <a href="index.php">Logout</a>
