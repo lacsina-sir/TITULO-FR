@@ -495,6 +495,18 @@
         </div>
     </section>
 
+    <!-- About Us Section -->
+    <section id="about" class="about-section">
+        <div align="center">
+            <h2 class="section-title">About <span class="highlight">Us</span></h2>
+            <p class="about-text">
+                Compass North is a group of engineers 
+                that aim to provide a good and quality
+                 service in locating your rights for the Land. 
+                 Pure service is given to our clients.
+            </p>
+    </section>
+
     <!-- Projects Gallery -->
     <section id="projects" class="projects-section">
         <div class="projects-container">

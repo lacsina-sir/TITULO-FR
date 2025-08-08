@@ -1,30 +1,8 @@
-<?php
-session_start();
-require_once("db_connection.php");
-
-// Redirect if not admin
-if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
-    header("Location: ../login.php");
-    exit();
-}
-
-// Fetch messages
-$messages = [];
-if ($conn) {
-    $query = "SELECT * FROM messages ORDER BY timestamp ASC";
-    $result = mysqli_query($conn, $query);
-    if ($result) {
-        while ($row = mysqli_fetch_assoc($result)) {
-            $messages[] = $row;
-        }
-    }
-}
-?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Chat</title>
     <style>
         * {
@@ -74,42 +52,54 @@ if ($conn) {
             padding: 20px;
             flex: 1;
             color: #fff;
+            display: flex;
+            flex-direction: column;
+            height: 100vh; /* Set height to fill the viewport */
         }
 
         .chat-container {
             background: rgba(255, 255, 255, 0.1);
             padding: 20px;
             border-radius: 8px;
-            max-height: 70vh;
+            flex-grow: 1; /* Allows the chat container to fill available space */
             overflow-y: auto;
+            margin-bottom: 20px; /* Add margin to separate from the form */
         }
 
         .message {
             margin-bottom: 15px;
+            display: flex;
         }
 
         .message.admin {
+            justify-content: flex-end;
             text-align: right;
+        }
+        
+        .message.client {
+            justify-content: flex-start;
+            text-align: left;
+        }
+
+        .message .content {
+            padding: 10px 15px;
+            border-radius: 15px;
+            max-width: 60%;
         }
 
         .message.admin .content {
             background: #007BFF;
-            display: inline-block;
-            padding: 10px 15px;
-            border-radius: 15px;
+            text-align: left;
         }
 
         .message.client .content {
             background: #444;
-            display: inline-block;
-            padding: 10px 15px;
-            border-radius: 15px;
         }
 
         form {
-            margin-top: 20px;
             display: flex;
             gap: 10px;
+            margin-top: auto; /* Pushes the form to the bottom */
         }
 
         input[type="text"] {
@@ -117,6 +107,9 @@ if ($conn) {
             padding: 10px;
             border: none;
             border-radius: 8px;
+            background: #333;
+            color: #fff;
+            outline: none;
         }
 
         button {
@@ -131,43 +124,130 @@ if ($conn) {
         button:hover {
             background: #0080ff;
         }
+        
+        .message-header {
+            font-weight: bold;
+            display: block;
+            margin-bottom: 4px;
+        }
 
+        .message-timestamp {
+            font-size: 10px;
+            color: #ccc;
+            display: block;
+            margin-top: 4px;
+        }
     </style>
 </head>
 <body>
 
     <div class="sidebar">
         <h2>TITULO Admin</h2>
-         <a href="admin_dashboard.php">Dashboard</a>
-         <a href="client_request.php">Client Requests</a>
-         <a href="client_updates.php">Client Updates</a>
-         <a href="transaction_files.php">Survey Files</a>
-         <a href="admin_chat.php">Chat</a>
-         <a href="index.php">Logout</a>
+        <a href="admin_dashboard.php">Dashboard</a>
+        <a href="client_request.php">Client Requests</a>
+        <a href="client_updates.php">Client Updates</a>
+        <a href="transaction_files.php">Survey Files</a>
+        <a href="admin_chat.php">Chat</a>
+        <a href="index.php">Logout</a>
     </div>
 
     <div class="main-content">
         <h1>Admin-Client Chat</h1>
-
-        <div class="chat-container">
-            <?php foreach ($messages as $msg): ?>
-                <div class="message <?php echo $msg['sender'] === 'admin' ? 'admin' : 'client'; ?>">
-                    <div class="content">
-                        <strong><?php echo ucfirst($msg['sender']); ?>:</strong>
-                        <?php echo htmlspecialchars($msg['message']); ?>
-                        <div style="font-size: 10px; margin-top: 4px;">
-                            <?php echo date("M d, Y H:i", strtotime($msg['timestamp'])); ?>
-                        </div>
-                    </div>
-                </div>
-            <?php endforeach; ?>
+        <div class="chat-container" id="chatContainer">
+            <!-- Messages will be injected here by JavaScript -->
         </div>
 
-        <form action="send_message_admin.php" method="post">
-            <input type="text" name="message" placeholder="Type your message..." required>
+        <form id="chatForm">
+            <input type="text" name="message" id="messageInput" placeholder="Type your message..." required>
             <button type="submit">Send</button>
         </form>
     </div>
+
+    <script>
+        const chatContainer = document.getElementById('chatContainer');
+        const chatForm = document.getElementById('chatForm');
+        const messageInput = document.getElementById('messageInput');
+        
+        let lastMessageTimestamp = 0;
+
+        function renderMessage(msg) {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message', msg.sender);
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.classList.add('content');
+            
+            const messageHeader = document.createElement('span');
+            messageHeader.classList.add('message-header');
+            messageHeader.textContent = msg.sender === 'admin' ? 'You' : 'Client';
+
+            const messageText = document.createTextNode(msg.message);
+
+            const timestampSpan = document.createElement('span');
+            timestampSpan.classList.add('message-timestamp');
+            timestampSpan.textContent = new Date(msg.timestamp * 1000).toLocaleString();
+
+            contentDiv.appendChild(messageHeader);
+            contentDiv.appendChild(messageText);
+            contentDiv.appendChild(timestampSpan);
+            messageDiv.appendChild(contentDiv);
+            
+            chatContainer.appendChild(messageDiv);
+        }
+
+        async function fetchMessages() {
+            try {
+                const response = await fetch(`get_messages.php?lastTimestamp=${lastMessageTimestamp}`);
+                const newMessages = await response.json();
+
+                if (newMessages.length > 0) {
+                    newMessages.forEach(msg => {
+                        renderMessage(msg);
+                    });
+                    lastMessageTimestamp = newMessages[newMessages.length - 1].timestamp;
+                    chatContainer.scrollTop = chatContainer.scrollHeight;
+                }
+            } catch (error) {
+                console.error('Error fetching messages:', error);
+            }
+        }
+        
+        // Handle form submission to send new message
+        chatForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const message = messageInput.value.trim();
+            if (message === '') return;
+            
+            try {
+                const formData = new FormData();
+                formData.append('message', message);
+                formData.append('sender', 'admin'); 
+
+                const response = await fetch('send_message.php', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    messageInput.value = '';
+                    fetchMessages();
+                } else {
+                    console.error('Failed to send message:', result.error);
+                }
+            } catch (error) {
+                console.error('Error sending message:', error);
+            }
+        });
+
+        // Initial fetch and then poll for new messages every 2 seconds
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchMessages();
+            setInterval(fetchMessages, 2000); 
+        });
+
+    </script>
 
 </body>
 </html>

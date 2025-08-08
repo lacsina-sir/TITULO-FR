@@ -7,6 +7,7 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
+
 // Get first and last name from session
 $first_name = $_SESSION['first_name'] ?? 'Client';
 $last_name = $_SESSION['last_name'] ?? '';

@@ -3,45 +3,86 @@ session_start();
 
 // Redirect if not logged in
 if (!isset($_SESSION['user_id'])) {
-    header("Location: index.php");
+    header("Location: login_register.php");
     exit();
 }
 
 $host = 'localhost';
 $username = 'root';
 $password = '';
-$dbname = 'compass_north';
+$dbname = 'titulo_db';
 
+// create connection
 $conn = new mysqli($host, $username, $password, $dbname);
 if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
+$conn->set_charset("utf8mb4");
 
-$userId = $_SESSION['user_id'];
+$userId = (int) $_SESSION['user_id'];
 $message = "";
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
-    $first_name = trim($_POST['first_name']);
-    $last_name = trim($_POST['last_name']);
-    $email = trim($_POST['email']);
-    $contact_number = trim($_POST['contact_number']);
+    // collect and sanitize inputs
+    $first_name = trim($_POST['first_name'] ?? '');
+    $last_name = trim($_POST['last_name'] ?? '');
+    $email = trim($_POST['email'] ?? '');
 
-    $updateSql = "UPDATE users SET first_name=?, last_name=?, email=?, contact_number=? WHERE id=?";
-    $stmt = $conn->prepare($updateSql);
-    $stmt->bind_param("ssssi", $first_name, $last_name, $email, $contact_number, $userId);
-    if ($stmt->execute()) {
-        $message = "Profile updated successfully.";
+    // basic validation
+    if ($first_name === '' || $last_name === '') {
+        $message = "First name and last name are required.";
+    } elseif ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $message = "Please provide a valid email address.";
     } else {
-        $message = "Failed to update profile.";
+        // check email uniqueness (exclude current user)
+        $checkEmailSql = "SELECT id FROM users WHERE email = ? AND id != ?";
+        if ($checkStmt = $conn->prepare($checkEmailSql)) {
+            $checkStmt->bind_param("si", $email, $userId);
+            $checkStmt->execute();
+            $checkStmt->store_result();
+            if ($checkStmt->num_rows > 0) {
+                $message = "That email address is already in use by another account.";
+                $checkStmt->close();
+            } else {
+                $checkStmt->close();
+                
+                $updateSql = "UPDATE users SET first_name=?, last_name=?, email=? WHERE id=?";
+                if ($stmt = $conn->prepare($updateSql)) {
+                    $stmt->bind_param("sssi", $first_name, $last_name, $email, $userId);
+                    if ($stmt->execute()) {
+                        $message = "Profile updated successfully.";
+                        //refresh session values:
+                        $_SESSION['first_name'] = $first_name;
+                        $_SESSION['last_name'] = $last_name;
+                        $_SESSION['email'] = $email;
+                    } else {
+                        $message = "Failed to update profile. Please try again.";
+                    }
+                    $stmt->close();
+                } else {
+                    $message = "Database error (prepare failed).";
+                }
+            }
+        } else {
+            $message = "Database error (prepare failed).";
+        }
     }
 }
 
-$sql = "SELECT first_name, last_name, email, contact_number FROM users WHERE id=?";
-$stmt = $conn->prepare($sql);
-$stmt->bind_param("i", $userId);
-$stmt->execute();
-$result = $stmt->get_result();
-$user = $result->fetch_assoc();
+// fetch current user data for form (no contact_number)
+$sql = "SELECT first_name, last_name, email FROM users WHERE id=?";
+$user = ['first_name'=>'', 'last_name'=>'', 'email'=>''];
+if ($stmt = $conn->prepare($sql)) {
+    $stmt->bind_param("i", $userId);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    if ($row = $result->fetch_assoc()) {
+        $user = $row;
+    }
+    $stmt->close();
+}
+
+$conn->close();
 ?>
 
 <!DOCTYPE html>
@@ -179,9 +220,6 @@ $user = $result->fetch_assoc();
         <label for="email">Email</label>
         <input type="email" id="email" name="email" required value="<?= htmlspecialchars($user['email']) ?>">
 
-        <label for="contact_number">Contact Number</label>
-        <input type="text" id="contact_number" name="contact_number" required value="<?= htmlspecialchars($user['contact_number']) ?>">
-
         <input type="submit" value="Save Changes">
     </form>
 
@@ -192,4 +230,3 @@ $user = $result->fetch_assoc();
 
 </body>
 </html>
-
