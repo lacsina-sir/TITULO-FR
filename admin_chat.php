@@ -1,3 +1,7 @@
+<?php
+// session_start();
+// // Add your backend logic here (fetch messages, send messages, etc.)
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
