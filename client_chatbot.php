@@ -1,6 +1,18 @@
 <?php
-// session_start();
-// // Add your backend logic here (fetch messages, send messages, etc.)
+session_start();
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['message'])) {
+  $message = trim($_POST['message']);
+  if ($message !== '') {
+    $conn = new mysqli("localhost", "root", "", "titulo_db");
+    $stmt = $conn->prepare("INSERT INTO chat_messages (sender, client_id, message) VALUES ('client', ?, ?)");
+    $stmt->bind_param("is", $client_id, $message);
+    $stmt->execute();
+    $stmt->close();
+    $conn->close();
+  }
+  exit;
+}
 ?>
 
 <!DOCTYPE html>
@@ -15,6 +27,7 @@
     background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
     color: #fff;
   }
+
   .chatbot-container {
     display: flex;
     flex-direction: column;
@@ -26,6 +39,7 @@
     max-width: 370px;
     margin: auto;
   }
+
   .chatbot-header {
     background: #00ffcc;
     color: #222;
@@ -38,6 +52,7 @@
     font-weight: bold;
     font-size: 18px;
   }
+
   .chatbot-avatar {
     width: 36px;
     height: 36px;
@@ -46,25 +61,30 @@
     border: 2px solid #fff;
     box-shadow: 0 2px 8px rgba(20,58,109,0.15);
   }
+
   .chatbot-header-info {
     display: flex;
     flex-direction: column;
   }
+
   .chatbot-header-title {
     font-size: 16px;
     font-weight: 600;
     color: #222;
   }
+  
   .chatbot-header-status {
     font-size: 13px;
     color: #143a6d;
   }
+
   .chatbot-close {
     cursor: pointer;
     font-size: 22px;
     font-weight: bold;
     color: #222;
   }
+  
   .chatbot-messages {
     flex: 1;
     padding: 18px 14px;
@@ -74,6 +94,7 @@
     overflow-y: auto;
     background: transparent;
   }
+
   .bubble {
     max-width: 75%;
     padding: 12px 16px;
@@ -84,12 +105,14 @@
     word-break: break-word;
     position: relative;
   }
+
   .bubble.user {
     align-self: flex-end;
     background: #00ffcc;
     color: #222;
     border-bottom-right-radius: 6px;
   }
+
   .bubble.admin {
     align-self: flex-start;
     background: #222;
@@ -97,6 +120,7 @@
     border-bottom-left-radius: 6px;
     border: 1px solid #00ffcc;
   }
+
   .chatbot-input-area {
     display: flex;
     align-items: center;
@@ -107,6 +131,7 @@
     box-shadow: 0 -2px 8px rgba(0,0,0,0.15);
     gap: 8px;
   }
+
   .chatbot-input {
     flex: 1;
     padding: 10px 14px;
@@ -117,9 +142,11 @@
     background: rgba(255,255,255,0.08);
     color: #fff;
   }
+
   .chatbot-input::placeholder {
     color: #ccc;
   }
+  
   .chatbot-send-btn {
     background: #00ffcc;
     border: none;
@@ -132,18 +159,22 @@
     cursor: pointer;
     transition: background 0.2s;
   }
+
   .chatbot-send-btn:hover {
     background: #00e6b3;
   }
+
   .chatbot-send-btn svg {
     width: 22px;
     height: 22px;
     fill: #222;
   }
+
   .typing-dots {
     display: inline-flex;
     gap: 4px;
   }
+
   .dot {
     width: 8px;
     height: 8px;
@@ -151,6 +182,7 @@
     background: #00ffcc;
     animation: blink 1.4s infinite both;
   }
+
   @keyframes blink {
     0%, 20% {
       transform: scale(1);

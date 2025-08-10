@@ -118,6 +118,16 @@ if (!$result) {
         .request-card a:hover {
         text-decoration: underline;
         }
+
+        .container {
+            max-width: 1000px;
+            margin: 50px auto;
+            padding: 30px;
+            background-color: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
+            animation: fadeIn 1s ease-in-out;
+        }
     </style>
     </head>
     <body>
@@ -165,7 +175,7 @@ if (!$result) {
             </div>
         <?php endwhile; ?>
         <?php else: ?>
-        <p>No client requests found.</p>
+        <p class="container">No client requests found.</p>
         <?php endif; ?>
     </div>
 

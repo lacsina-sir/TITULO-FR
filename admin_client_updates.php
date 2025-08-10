@@ -134,6 +134,16 @@ $result = $conn->query($sql);
     .actions button:hover {
       background-color: #1de9b6;
     }
+
+    .container-one {
+        max-width: 1000px;
+        margin: 50px auto;
+        padding: 30px;
+        background-color: rgba(255, 255, 255, 0.05);
+        border-radius: 10px;
+        box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
+        animation: fadeIn 1s ease-in-out;
+    }
   </style>
 </head>
 <body>
@@ -182,7 +192,7 @@ $result = $conn->query($sql);
         </tbody>
       </table>
     <?php else: ?>
-      <p>No pending updates found.</p>
+      <p class="container-one">No pending updates found.</p>
     <?php endif; ?>
   </div>
 

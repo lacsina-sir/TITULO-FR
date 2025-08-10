@@ -33,6 +33,7 @@ $result = $conn->query("SELECT * FROM survey_files ORDER BY date_submitted DESC"
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       background: linear-gradient(to bottom, #0f2027, #203a43, #2c5364);
       color: #fff;
+      height: 100vh;
     }
 
     .navbar {

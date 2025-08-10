@@ -96,6 +96,7 @@ $conn->close();
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(to bottom right, #0f2027, #203a43, #2c5364);
             color: #fff;
+            min-height: 100vh;
         }
 
         .topnav {
@@ -145,51 +146,71 @@ $conn->close();
             text-align: center;
         }
 
-        form {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid #444;
-            border-radius: 12px;
-            padding: 30px;
-            box-shadow: 0 0 15px rgba(0, 200, 255, 0.4);
+        .form-section {
+            background: rgba(255,255,255,0.05);
+            border-left: 5px solid #00ffcc;
+            padding: 32px 28px;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            animation: fadeIn 1s ease;
         }
 
-        label {
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .form-section h2 {
+            color: #00ffcc;
+            margin-bottom: 24px;
+            text-align: center;
+        }
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        .form-group label {
             display: block;
-            margin-bottom: 8px;
-            font-weight: bold;
-            color: #ddd;
+            margin-bottom: 7px;
+            color: #fff;
+            font-weight: 500;
         }
 
-        input[type="text"], input[type="email"] {
+        .form-group input[type="text"],
+        .form-group input[type="email"] {
             width: 100%;
             padding: 10px;
-            margin-bottom: 20px;
-            background: #222;
-            border: 1px solid #555;
-            border-radius: 6px;
-            color: white;
-        }
-
-        input[type="submit"] {
-            background-color: #00c8ff;
-            color: white;
-            padding: 12px 25px;
+            border-radius: 8px;
             border: none;
-            border-radius: 6px;
-            font-size: 16px;
-            cursor: pointer;
-            transition: background 0.3s ease;
+            background: #222;
+            color: #fff;
+            font-size: 15px;
         }
 
-        input[type="submit"]:hover {
-            background-color: #0099cc;
+        button[type="submit"] {
+            width: 103%;
+            padding: 10px;
+            background: #00ffcc;
+            color: #222;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        button[type="submit"]:hover {
+            background: #009bb5;
         }
 
         .message {
-            margin-top: 15px;
+            margin-top: 20px;
             font-size: 14px;
-            color: #0f0;
+            color: #00ffcc;
             text-align: center;
+            font-weight: bold;
         }
     </style>
 </head>
@@ -208,24 +229,32 @@ $conn->close();
 </div>
 
 <div class="main">
-    <h1>Welcome, <?= htmlspecialchars($user['first_name'] . ' ' . $user['last_name']) ?>!</h1>
+    <div class="form-section">
+        <h2>Welcome, <?= htmlspecialchars($user['first_name'] . ' ' . $user['last_name']) ?>!</h2>
 
-    <form method="post" action="client_profile.php">
-        <label for="first_name">First Name</label>
-        <input type="text" id="first_name" name="first_name" required value="<?= htmlspecialchars($user['first_name']) ?>">
+        <form method="post" action="client_profile.php">
+            <div class="form-group">
+                <label for="first_name">First Name</label>
+                <input type="text" id="first_name" name="first_name" required value="<?= htmlspecialchars($user['first_name']) ?>">
+            </div>
 
-        <label for="last_name">Last Name</label>
-        <input type="text" id="last_name" name="last_name" required value="<?= htmlspecialchars($user['last_name']) ?>">
+            <div class="form-group">
+                <label for="last_name">Last Name</label>
+                <input type="text" id="last_name" name="last_name" required value="<?= htmlspecialchars($user['last_name']) ?>">
+            </div>
 
-        <label for="email">Email</label>
-        <input type="email" id="email" name="email" required value="<?= htmlspecialchars($user['email']) ?>">
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" required value="<?= htmlspecialchars($user['email']) ?>">
+            </div>
 
-        <input type="submit" value="Save Changes">
-    </form>
+            <button type="submit">Save Changes</button>
+        </form>
 
-    <?php if (!empty($message)) : ?>
-        <div class="message"><?= htmlspecialchars($message) ?></div>
-    <?php endif; ?>
+        <?php if (!empty($message)) : ?>
+            <div class="message"><?= htmlspecialchars($message) ?></div>
+        <?php endif; ?>
+    </div>
 </div>
 
 </body>
