@@ -16,7 +16,7 @@ include 'db_connection.php';
 $user_id = $_SESSION['user_id'] ?? 0;
 
 // Fetch submitted forms for this user
-$query = "SELECT * FROM client_forms WHERE user_id = ? ORDER BY created_at DESC";
+$query = "SELECT type, status, rejection_reason, date, location, others_text, file_path FROM client_forms WHERE user_id = ? ORDER BY created_at DESC";
 $stmt = $conn->prepare($query);
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
@@ -263,10 +263,28 @@ $result = $stmt->get_result();
         <?php while ($row = $result->fetch_assoc()): ?>
           <div class="update-card">
             <h3><?php echo htmlspecialchars($row['type']); ?> Submitted</h3>
-            <p>
-              Status: <span style="color:#ffcc00;font-weight:bold;"><?php echo htmlspecialchars($row['status']); ?></span><br>
-              Date Submitted: <?php echo htmlspecialchars($row['date']); ?>
-            </p>
+              <p>
+                <?php
+                $status = strtolower($row['status']);
+                $statusColor = '#ffcc00'; // default: pending (waiting for approval)
+                $statusLabel = 'Waiting for approval';
+
+                if ($status === 'approved') {
+                    $statusColor = '#00cc66';
+                    $statusLabel = 'Approved';
+                } elseif ($status === 'rejected') {
+                    $statusColor = '#ff3333';
+                    $statusLabel = 'Rejected';
+                }
+                ?>
+                Status: <span style="color:<?php echo $statusColor; ?>; font-weight:bold;">
+                  <?php echo $statusLabel; ?>
+                </span><br>
+                Date Submitted: <?php echo htmlspecialchars($row['date']); ?>
+                <?php if (strtolower($status) === 'rejected' && !empty($row['reject_reason'])): ?>
+                  <br><span style="color:#ff3333;font-weight:bold;">Reason: <?php echo htmlspecialchars($row['reject_reason']); ?></span>
+                <?php endif; ?>
+              </p>
             <?php if (!empty($row['location'])): ?>
               <p>Location: <?php echo htmlspecialchars($row['location']); ?></p>
             <?php endif; ?>
