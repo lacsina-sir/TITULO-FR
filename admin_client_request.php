@@ -214,7 +214,7 @@ if (!$result) {
                 <p>Location of Property: <?= htmlspecialchars($r['location']) ?></p>
 
             <?php elseif ($r['type'] === 'Others'): ?>
-                <p>Reject Reason: <?= nl2br(htmlspecialchars($r['others_text'])) ?></p>
+                <p>Reason of Reject: <?= nl2br(htmlspecialchars($r['others_text'])) ?></p>
             <?php endif; ?>
 
             <small>Requested on <?= date("F j, Y, g:i a", strtotime($r['created_at'])) ?></small>

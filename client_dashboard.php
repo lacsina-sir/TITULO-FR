@@ -289,7 +289,7 @@ $result = $stmt->get_result();
               <p>Location: <?php echo htmlspecialchars($row['location']); ?></p>
             <?php endif; ?>
             <?php if (!empty($row['others_text'])): ?>
-              <p>Details: <?php echo htmlspecialchars($row['others_text']); ?></p>
+              <p>Reason of Reject: <?php echo htmlspecialchars($row['others_text']); ?></p>
             <?php endif; ?>
             <?php if (!empty($row['file_path'])): ?>
               <p>File: <a href="<?php echo htmlspecialchars($row['file_path']); ?>" style="color:#00ffcc;" target="_blank">Download</a></p>
