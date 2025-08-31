@@ -17,14 +17,27 @@ $sql = "
         id,
         CONCAT(name, ' ', last_name) AS full_name,
         type,
-        location,
-        others_text,
-        file_path,
+        ls_location,
+        ls_area,
+        ls_purpose,
+        ls_specify_text,
+        sp_location,
+        sp_use,
+        sp_specify_text,
+        tt_owner,
+        tt_reason,
+        tt_specify_text,
+        fu_ref,
+        fu_details,
+        inquiry_details,
+        file_paths,
         status,
         created_at
     FROM client_forms
+    WHERE status = 'pending'
     ORDER BY created_at DESC
 ";
+
 $result = $conn->query($sql);
 if (!$result) {
     die("Query failed: " . $conn->error);
@@ -195,38 +208,63 @@ if (!$result) {
 
         <?php if ($result->num_rows): ?>
         <?php while ($r = $result->fetch_assoc()): ?>
-            <div class="request-card">
+        <div class="request-card">
             <h3><?= htmlspecialchars($r['full_name']) ?></h3>
             <p>Type: <?= htmlspecialchars($r['type']) ?></p>
 
             <?php if ($r['type'] === 'Land Survey'): ?>
-                <?php if ($r['file_path']): ?>
-                <p>Uploaded Form: 
-                    <a href="<?= htmlspecialchars($r['file_path']) ?>" target="_blank">
-                    View / Download
-                    </a>
-                </p>
-                <?php else: ?>
-                <p><em>No file uploaded.</em></p>
-                <?php endif; ?>
+                <p>Location: <?= htmlspecialchars($r['ls_location']) ?></p>
+                <p>Area: <?= htmlspecialchars($r['ls_area']) ?></p>
+                <p>Purpose: <?= htmlspecialchars($r['ls_purpose']) ?></p>
+
+            <?php elseif ($r['type'] === 'Sketch Plan'): ?>
+                <p>Location: <?= htmlspecialchars($r['sp_location']) ?></p>
+                <p>Use: <?= htmlspecialchars($r['sp_use']) ?></p>
+
+            <?php elseif ($r['type'] === 'Title Transfer'): ?>
+                <p>Owner: <?= htmlspecialchars($r['tt_owner']) ?></p>
+                <p>Reason: <?= htmlspecialchars($r['tt_reason']) ?></p>
 
             <?php elseif ($r['type'] === 'Follow Up'): ?>
-                <p>Location of Property: <?= htmlspecialchars($r['location']) ?></p>
+                <p>Reference: <?= htmlspecialchars($r['fu_ref']) ?></p>
+                <p>Details: <?= nl2br(htmlspecialchars($r['fu_details'])) ?></p>
 
-            <?php elseif ($r['type'] === 'Others'): ?>
-                <p>Reason of Reject: <?= nl2br(htmlspecialchars($r['others_text'])) ?></p>
+            <?php elseif ($r['type'] === 'Inquiry'): ?>
+                <p>Details: <?= nl2br(htmlspecialchars($r['inquiry_details'])) ?></p>
+            <?php endif; ?>
+
+            <?php if (!empty($r['specify_text'])): ?>
+                <p><strong>Other:</strong> <?= htmlspecialchars($r['specify_text']) ?></p>
+            <?php endif; ?>
+
+            <?php if (!empty($r['file_paths'])): ?>
+                <p>Files:</p>
+                <ul>
+                    <?php 
+                    $files = json_decode($r['file_paths'], true);
+                    if (!is_array($files)) {
+                        $files = explode(',', $r['file_paths']);
+                    }
+                    foreach ($files as $file): 
+                        $file = trim($file);
+                        if ($file): ?>
+                            <li>
+                                <a href="<?= htmlspecialchars($file) ?>" target="_blank">View File</a>
+                            </li>
+                        <?php endif;
+                    endforeach; ?>
+                </ul>
+            <?php else: ?>
+                <p><em>No files uploaded.</em></p>
             <?php endif; ?>
 
             <small>Requested on <?= date("F j, Y, g:i a", strtotime($r['created_at'])) ?></small>
             <div class="button-group">
-                <button class="approve-btn" data-id="<?= htmlspecialchars($r['id']) ?>" title="Approve">
-                    &#10003;
-                </button>
-                <button class="reject-btn" data-id="<?= htmlspecialchars($r['id']) ?>" title="Reject">
-                    &#10005;
-                </button>
+                <button class="approve-btn" data-id="<?= htmlspecialchars($r['id']) ?>" title="Approve">&#10003;</button>
+                <button class="reject-btn" data-id="<?= htmlspecialchars($r['id']) ?>" title="Reject">&#10005;</button>
             </div>
-            </div>
+        </div>
+
         <?php endwhile; ?>
         <?php else: ?>
         <p class="container">No client requests found.</p>

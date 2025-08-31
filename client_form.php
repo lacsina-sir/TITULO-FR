@@ -2,36 +2,87 @@
 session_start();
 require 'db_connection.php';
 
-// Handle form submission
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['name'], $_POST['date'], $_POST['type'])) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $user_id = $_SESSION['user_id'] ?? null;
     $name = $conn->real_escape_string($_POST['name']);
     $last_name = $conn->real_escape_string($_POST['last_name']);
-    $date = $conn->real_escape_string($_POST['date']);
+    $date = date('Y-m-d');
     $type = $conn->real_escape_string($_POST['type']);
-    $location = isset($_POST['location']) ? $conn->real_escape_string($_POST['location']) : '';
-    $others_text = isset($_POST['others_text']) ? $conn->real_escape_string($_POST['others_text']) : '';
-    $status = 'Waiting for approval';
+    $status = 'pending';
 
-    // Handle file upload
-    $file_name = '';
-    if (isset($_FILES['file']) && $_FILES['file']['error'] === UPLOAD_ERR_OK) {
-        $upload_dir = 'uploads/';
-        if (!is_dir($upload_dir)) {
-            mkdir($upload_dir, 0777, true);
-        }
-        $file_name = basename($_FILES['file']['name']);
-        $target_file = $upload_dir . time() . '_' . $file_name;
-        if (move_uploaded_file($_FILES['file']['tmp_name'], $target_file)) {
-            $file_name = $target_file;
-        } else {
-            $file_name = '';
+    // Initialize variables
+    $ls_location = $ls_area = $ls_purpose = '';
+    $sp_location = $sp_use = '';
+    $tt_owner = $tt_reason = '';
+    $fu_ref = $fu_details = '';
+    $inquiry_details = '';
+    $file_paths = [];
+
+    // Handle type-specific fields
+    $ls_specify_text = $sp_specify_text = $tt_specify_text = '';
+    if ($type === 'Land Survey') {
+        $ls_location = $conn->real_escape_string($_POST['ls_location'] ?? '');
+        $ls_area = $conn->real_escape_string($_POST['ls_area'] ?? '');
+        $ls_purpose = $conn->real_escape_string($_POST['ls_purpose'] ?? '');
+        $ls_specify_text = $conn->real_escape_string($_POST['ls_specify_text'] ?? '');
+    } elseif ($type === 'Sketch Plan') {
+        $sp_location = $conn->real_escape_string($_POST['sp_location'] ?? '');
+        $sp_use = $conn->real_escape_string($_POST['sp_use'] ?? '');
+        $sp_specify_text = $conn->real_escape_string($_POST['sp_specify_text'] ?? '');
+    } elseif ($type === 'Title Transfer') {
+        $tt_owner = $conn->real_escape_string($_POST['tt_owner'] ?? '');
+        $tt_reason = $conn->real_escape_string($_POST['tt_reason'] ?? '');
+        $tt_specify_text = $conn->real_escape_string($_POST['tt_specify_text'] ?? '');
+    } elseif ($type === 'Follow Up') {
+        $fu_ref = $conn->real_escape_string($_POST['fu_ref'] ?? '');
+        $fu_details = $conn->real_escape_string($_POST['fu_details'] ?? '');
+    }
+
+    // Inquiry (optional for all types)
+    $inquiry_details = $conn->real_escape_string($_POST['inquiry_details'] ?? '');
+
+    // Handle file uploads
+    foreach ($_FILES as $fileGroup) {
+        if (is_array($fileGroup['name'])) {
+            for ($i = 0; $i < count($fileGroup['name']); $i++) {
+                if ($fileGroup['error'][$i] === UPLOAD_ERR_OK) {
+                    $upload_dir = 'uploads/';
+                    if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
+                    $filename = time() . '_' . basename($fileGroup['name'][$i]);
+                    $target = $upload_dir . $filename;
+                    if (move_uploaded_file($fileGroup['tmp_name'][$i], $target)) {
+                        $file_paths[] = $target;
+                    }
+                }
+            }
         }
     }
 
+    $file_paths_json = json_encode($file_paths);
     // Insert into database
-    $stmt = $conn->prepare("INSERT INTO client_forms (user_id, name, last_name, date, type, location, others_text, file_path, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-    $user_id = $_SESSION['user_id'] ?? null;
-    $stmt->bind_param("issssssss", $user_id, $name, $last_name, $date, $type, $location, $others_text, $file_name, $status);
+    $sql = "INSERT INTO client_forms (
+        user_id, name, last_name, type, date, status,
+        ls_location, ls_area, ls_purpose, ls_specify_text,
+        sp_location, sp_use, sp_specify_text,
+        tt_owner, tt_reason, tt_specify_text,
+        fu_ref, fu_details,
+        inquiry_details, file_paths
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+    $stmt = $conn->prepare($sql);
+    if ($stmt === false) {
+        die('Prepare failed: ' . $conn->error);
+    }
+
+    $stmt->bind_param("isssssssssssssssssss",
+        $user_id, $name, $last_name, $type, $date, $status,
+        $ls_location, $ls_area, $ls_purpose, $ls_specify_text,
+        $sp_location, $sp_use, $sp_specify_text,
+        $tt_owner, $tt_reason, $tt_specify_text,
+        $fu_ref, $fu_details,
+        $inquiry_details, $file_paths_json
+    );
+
     $stmt->execute();
     $stmt->close();
 
@@ -200,25 +251,93 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['name'], $_POST['date'
                 <input type="text" name="date" id="date" value="<?php echo date('Y-m-d'); ?>" readonly>
             </div>
             <div class="form-group">
-                <label for="type">Type:</label>
+                <label for="type">Request Type:</label>
                 <select name="type" id="type" required>
                     <option value="">Select type</option>
                     <option value="Land Survey">Land Survey</option>
+                    <option value="Sketch Plan">Sketch Plan / Vicinity Plan</option>
+                    <option value="Title Transfer">Title Transfer / Titling</option>
                     <option value="Follow Up">Follow Up</option>
-                    <option value="Others">Others</option>
                 </select>
             </div>
-            <div class="form-group" id="locationGroup" style="display:none;">
-                <label for="location">Location of Property:</label>
-                <input type="text" name="location" id="location">
+            <!-- Land Survey Fields -->
+            <div class="form-group" id="landSurveyFields" style="display:none;">
+                <label for="ls_location">Property Location (Address or GPS):</label>
+                <input type="text" name="ls_location" id="ls_location" required>
+                <label for="ls_area">Lot Size / Area (sqm):</label>
+                <input type="text" name="ls_area" id="ls_area" required>
+                <label for="ls_purpose">Purpose of Survey:</label>
+                <select name="ls_purpose" id="ls_purpose" required>
+                    <option value="">Select purpose</option>
+                    <option value="Sale">Sale</option>
+                    <option value="Transfer">Transfer</option>
+                    <option value="Development">Development</option>
+                    <option value="Others">Others</option>
+                </select>
+                <div id="ls_specifyGroup" style="display:none;">
+                    <label for="ls_specify_text">Specify:</label>
+                    <input type="text" name="ls_specify_text" id="ls_specify_text" required>
+                </div>
+                <label>Upload Existing Documents:</label>
+                <div id="ls_files">
+                    <input type="file" name="ls_files[]" required>
+                </div>
+                <button type="button" onclick="addFileInput('ls_files')" style="margin-top:8px;">Add More Files</button>
             </div>
-            <div class="form-group" id="othersGroup" style="display:none;">
-                <label for="others_text">Please specify:</label>
-                <textarea name="others_text" id="others_text" rows="4" style="width:100%;padding:10px;border-radius:8px;border:none;background:#222;color:#fff;font-size:15px;"></textarea>
+            <!-- Sketch Plan Fields -->
+            <div class="form-group" id="sketchPlanFields" style="display:none;">
+                <label for="sp_location">Property Location (address):</label>
+                <input type="text" name="sp_location" id="sp_location" required>
+                <label for="sp_use">Intended Use:</label>
+                <select name="sp_use" id="sp_use" required>
+                    <option value="">Select use</option>
+                    <option value="Building Permit">Building Permit</option>
+                    <option value="Zoning">Zoning</option>
+                    <option value="Others">Others</option>
+                </select>
+                <div id="sp_specifyGroup" style="display:none;">
+                    <label for="sp_specify_text">Specify:</label>
+                    <input type="text" name="sp_specify_text" id="sp_specify_text" required>
+                </div>
+                <label>Upload Supporting Files:</label>
+                <div id="sp_files">
+                    <input type="file" name="sp_files[]" required>
+                </div>
+                <button type="button" onclick="addFileInput('sp_files')" style="margin-top:8px;">Add More Files</button>
             </div>
-            <div class="form-group" id="fileGroup">
-                <label for="file">Upload Completed Form:</label>
-                <input type="file" name="file" id="file">
+            <!-- Title Transfer Fields -->
+            <div class="form-group" id="titleTransferFields" style="display:none;">
+                <label for="tt_owner">Current Title Owner Name:</label>
+                <input type="text" name="tt_owner" id="tt_owner" required>
+                <label for="tt_reason">Reason for Transfer:</label>
+                <select name="tt_reason" id="tt_reason" required>
+                    <option value="">Select reason</option>
+                    <option value="Sale">Sale</option>
+                    <option value="Inheritance">Inheritance</option>
+                    <option value="Donation">Donation</option>
+                    <option value="Others">Others</option>
+                </select>
+                <div id="tt_specifyGroup" style="display:none;">
+                    <label for="tt_specify_text">Specify:</label>
+                    <input type="text" name="tt_specify_text" id="tt_specify_text" required>
+                </div>
+                <label>Upload Required Documents:</label>
+                <div id="tt_files">
+                    <input type="file" name="tt_files[]" required>
+                </div>
+                <button type="button" onclick="addFileInput('tt_files')" style="margin-top:8px;">Add More Files</button>
+            </div>
+            <!-- Inquiry -->
+            <div class="form-group" id="inquiryFields" style="display:none;">
+                <label for="inquiry_details">Inquiry Details:</label>
+                <textarea name="inquiry_details" id="inquiry_details" rows="3" style="width:100%;padding:10px;border-radius:8px;border:none;background:#222;color:#fff;font-size:15px;"></textarea>
+            </div>
+            <!-- Follow Up Fields -->
+            <div class="form-group" id="followUpFields" style="display:none;">
+                <label for="fu_ref">Reference Number / Transaction ID:</label>
+                <input type="text" name="fu_ref" id="fu_ref" required>
+                <label for="fu_details">Follow-Up Details:</label>
+                <textarea name="fu_details" id="fu_details" rows="3" style="width:100%;padding:10px;border-radius:8px;border:none;background:#222;color:#fff;font-size:15px;" required></textarea>
             </div>
             <button type="submit">Submit</button>
         </form>
@@ -237,11 +356,118 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['name'], $_POST['date'
 </div>
 
 <script>
-document.getElementById('type').addEventListener('change', function() {
-    var type = this.value;
-    document.getElementById('locationGroup').style.display = (type === 'Follow Up') ? 'block' : 'none';
-    document.getElementById('othersGroup').style.display = (type === 'Others') ? 'block' : 'none';
-    document.getElementById('fileGroup').style.display = (type === 'Land Survey') ? 'block' : 'none';
+
+function addFileInput(containerId) {
+    const container = document.getElementById(containerId);
+
+    // Create a wrapper so input & remove button stay together
+    const wrapper = document.createElement('div');
+    wrapper.style.display = 'flex';
+    wrapper.style.alignItems = 'center';
+    wrapper.style.gap = '8px';
+    wrapper.style.marginTop = '8px';
+
+    // Create file input
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.name = containerId + '[]';
+    input.required = false;
+
+    // Create remove button
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.textContent = '✖';
+    removeBtn.style.background = 'transparent';
+    removeBtn.style.border = 'none';
+    removeBtn.style.color = 'red';
+    removeBtn.style.fontSize = '16px';
+    removeBtn.style.cursor = 'pointer';
+
+    // Remove input when button is clicked
+    removeBtn.addEventListener('click', function () {
+        wrapper.remove();
+    });
+
+    wrapper.appendChild(input);
+    wrapper.appendChild(removeBtn);
+    container.appendChild(wrapper);
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    const typeEl = document.getElementById('type');
+
+    function hideAllSections() {
+        ['landSurveyFields','sketchPlanFields','titleTransferFields','followUpFields','inquiryFields']
+        .forEach(id => document.getElementById(id).style.display = 'none');
+    }
+
+    function clearRequiredAll() {
+        document.querySelectorAll('#landSurveyFields input, #landSurveyFields select, #landSurveyFields textarea,' +
+            '#sketchPlanFields input, #sketchPlanFields select, #sketchPlanFields textarea,' +
+            '#titleTransferFields input, #titleTransferFields select, #titleTransferFields textarea,' +
+            '#followUpFields input, #followUpFields select, #followUpFields textarea,' +
+            '#inquiryFields input, #inquiryFields select, #inquiryFields textarea'
+        ).forEach(el => {
+            el.required = false;
+        });
+    }
+
+    function handleTypeChange() {
+        const type = typeEl.value;
+
+        hideAllSections();
+        clearRequiredAll();
+
+        if (type === 'Land Survey') {
+            document.getElementById('landSurveyFields').style.display = 'block';
+            document.getElementById('inquiryFields').style.display = 'block';
+            ['ls_location','ls_area','ls_purpose'].forEach(id => document.getElementById(id).required = true);
+            document.querySelector('#ls_files input[type="file"]').required = true;
+        } 
+        else if (type === 'Sketch Plan') {
+            document.getElementById('sketchPlanFields').style.display = 'block';
+            document.getElementById('inquiryFields').style.display = 'block';
+            ['sp_location','sp_use'].forEach(id => document.getElementById(id).required = true);
+            document.querySelector('#sp_files input[type="file"]').required = true;
+        } 
+        else if (type === 'Title Transfer') {
+            document.getElementById('titleTransferFields').style.display = 'block';
+            document.getElementById('inquiryFields').style.display = 'block';
+            ['tt_owner','tt_reason'].forEach(id => document.getElementById(id).required = true);
+            document.querySelector('#tt_files input[type="file"]').required = true;
+        } 
+        else if (type === 'Follow Up') {
+            document.getElementById('followUpFields').style.display = 'block';
+            ['fu_ref','fu_details'].forEach(id => document.getElementById(id).required = true);
+        }
+    }
+
+    // Make "Specify" required only if "Others" is chosen
+    function toggleSpecifyField(dropdownId, specifyGroupId, specifyInputId) {
+        const dropdown = document.getElementById(dropdownId);
+        const specifyGroup = document.getElementById(specifyGroupId);
+        const specifyInput = document.getElementById(specifyInputId);
+
+        dropdown.addEventListener('change', function () {
+        if (this.value === 'Others') {
+            specifyGroup.style.display = 'block';
+            specifyInput.required = true;
+        } else {
+            specifyGroup.style.display = 'none';
+            specifyInput.required = false;
+            specifyInput.value = '';
+        }
+        });
+    }
+
+    // Attach listeners ONCE
+    typeEl.addEventListener('change', handleTypeChange);
+    toggleSpecifyField('ls_purpose', 'ls_specifyGroup', 'ls_specify_text');
+    toggleSpecifyField('sp_use', 'sp_specifyGroup', 'sp_specify_text');
+    toggleSpecifyField('tt_reason', 'tt_specifyGroup', 'tt_specify_text');
+
+    // Initialize on load (in case a type is preselected)
+    handleTypeChange();
 });
 </script>
 

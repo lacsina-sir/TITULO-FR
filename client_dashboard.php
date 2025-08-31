@@ -16,7 +16,7 @@ include 'db_connection.php';
 $user_id = $_SESSION['user_id'] ?? 0;
 
 // Fetch submitted forms for this user
-$query = "SELECT type, status, rejection_reason, date, location, others_text, file_path FROM client_forms WHERE user_id = ? ORDER BY created_at DESC";
+$query = "SELECT * FROM client_forms WHERE user_id = ? ORDER BY created_at DESC";
 $stmt = $conn->prepare($query);
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
@@ -263,37 +263,64 @@ $result = $stmt->get_result();
         <?php while ($row = $result->fetch_assoc()): ?>
           <div class="update-card">
             <h3><?php echo htmlspecialchars($row['type']); ?> Submitted</h3>
-              <p>
-                <?php
+            <p>
+              <?php
                 $status = strtolower($row['status']);
-                $statusColor = '#ffcc00'; // default: pending (waiting for approval)
+                $statusColor = '#ffcc00';
                 $statusLabel = 'Waiting for approval';
-
                 if ($status === 'approved') {
-                    $statusColor = '#00cc66';
-                    $statusLabel = 'Approved';
+                  $statusColor = '#00cc66';
+                  $statusLabel = 'Approved';
                 } elseif ($status === 'rejected') {
-                    $statusColor = '#ff3333';
-                    $statusLabel = 'Rejected';
+                  $statusColor = '#ff3333';
+                  $statusLabel = 'Rejected';
                 }
-                ?>
-                Status: <span style="color:<?php echo $statusColor; ?>; font-weight:bold;">
-                  <?php echo $statusLabel; ?>
-                </span><br>
-                Date Submitted: <?php echo htmlspecialchars($row['date']); ?>
-                <?php if (strtolower($status) === 'rejected' && !empty($row['reject_reason'])): ?>
-                  <br><span style="color:#ff3333;font-weight:bold;">Reason: <?php echo htmlspecialchars($row['reject_reason']); ?></span>
-                <?php endif; ?>
-              </p>
-            <?php if (!empty($row['location'])): ?>
-              <p>Location: <?php echo htmlspecialchars($row['location']); ?></p>
+              ?>
+              Status: <span style="color:<?php echo $statusColor; ?>; font-weight:bold;"> <?php echo $statusLabel; ?> </span><br>
+              Date Submitted: <?php echo htmlspecialchars($row['date']); ?>
+              <?php if ($status === 'rejected' && !empty($row['rejection_reason'])): ?>
+                <br><span style="color:#ff3333;font-weight:bold;">Reason: <?php echo htmlspecialchars($row['rejection_reason']); ?></span>
+              <?php endif; ?>
+            </p>
+            <?php if ($row['type'] === 'Land Survey'): ?>
+              <?php if (!empty($row['ls_location'])): ?><p>Location: <?php echo htmlspecialchars($row['ls_location']); ?></p><?php endif; ?>
+              <?php if (!empty($row['ls_area'])): ?><p>Lot Size / Area: <?php echo htmlspecialchars($row['ls_area']); ?> sqm</p><?php endif; ?>
+              <?php if (!empty($row['ls_purpose'])): ?>
+                  <p>Purpose: <?php echo ($row['ls_purpose'] === 'Others' && !empty($row['ls_specify_text'])) 
+                      ? htmlspecialchars($row['ls_specify_text']) 
+                      : (($row['ls_purpose'] === 'Others') ? '' : htmlspecialchars($row['ls_purpose'])); ?></p>
+              <?php endif; ?>
+
+            <?php elseif ($row['type'] === 'Sketch Plan'): ?>
+              <?php if (!empty($row['sp_location'])): ?><p>Location: <?php echo htmlspecialchars($row['sp_location']); ?></p><?php endif; ?>
+              <?php if (!empty($row['sp_use'])): ?>
+                  <p>Intended Use: <?php echo ($row['sp_use'] === 'Others' && !empty($row['sp_specify_text'])) 
+                      ? htmlspecialchars($row['sp_specify_text']) 
+                      : (($row['sp_use'] === 'Others') ? '' : htmlspecialchars($row['sp_use'])); ?></p>
+              <?php endif; ?>
+
+            <?php elseif ($row['type'] === 'Title Transfer'): ?>
+              <?php if (!empty($row['tt_owner'])): ?><p>Current Title Owner: <?php echo htmlspecialchars($row['tt_owner']); ?></p><?php endif; ?>
+              <?php if (!empty($row['tt_reason'])): ?>
+                  <p>Reason for Transfer: <?php echo ($row['tt_reason'] === 'Others' && !empty($row['tt_specify_text'])) 
+                      ? htmlspecialchars($row['tt_specify_text']) 
+                      : (($row['tt_reason'] === 'Others') ? '' : htmlspecialchars($row['tt_reason'])); ?></p>
+              <?php endif; ?>
+
+                <?php elseif ($row['type'] === 'Follow Up'): ?>
+              <?php if (!empty($row['fu_ref'])): ?><p>Reference Number / Transaction ID: <?php echo htmlspecialchars($row['fu_ref']); ?></p><?php endif; ?>
+              <?php if (!empty($row['fu_details'])): ?><p>Follow-Up Details: <?php echo htmlspecialchars($row['fu_details']); ?></p><?php endif; ?>
             <?php endif; ?>
-            <?php if (!empty($row['others_text'])): ?>
-              <p>Reason of Reject: <?php echo htmlspecialchars($row['others_text']); ?></p>
-            <?php endif; ?>
-            <?php if (!empty($row['file_path'])): ?>
-              <p>File: <a href="<?php echo htmlspecialchars($row['file_path']); ?>" style="color:#00ffcc;" target="_blank">Download</a></p>
-            <?php endif; ?>
+
+            <?php if (!empty($row['inquiry_details'])): ?><p>Inquiry: <?php echo htmlspecialchars($row['inquiry_details']); ?></p><?php endif; ?>
+            <?php if (!empty($row['file_paths'])):
+              $files = json_decode($row['file_paths'], true);
+              if ($files && is_array($files)):
+                foreach ($files as $file): ?>
+                  <p>File: <a href="<?php echo htmlspecialchars($file); ?>" style="color:#00ffcc;" target="_blank">Download</a></p>
+                <?php endforeach;
+              endif;
+            endif; ?>
           </div>
         <?php endwhile; ?>
       <?php else: ?>
