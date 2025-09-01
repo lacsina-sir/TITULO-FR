@@ -17,6 +17,7 @@ $sql = "
         id,
         CONCAT(name, ' ', last_name) AS full_name,
         type,
+        transaction_number,
         ls_location,
         ls_area,
         ls_purpose,
@@ -43,7 +44,26 @@ if (!$result) {
     die("Query failed: " . $conn->error);
 }
 
+$getForm = $conn->prepare("SELECT * FROM client_forms WHERE id = ?");
+$getForm->bind_param("i", $id);
+$getForm->execute();
+$formResult = $getForm->get_result();
+$form = $formResult->fetch_assoc();
+$getForm->close();
+
+if ($form) {
+    $clientName = $form['name'] . ' ' . $form['last_name'];
+    $status = 'Pending';
+    $now = date('Y-m-d H:i:s');
+    $details = json_encode($form); // Save all form fields
+
+    $insert = $conn->prepare("INSERT INTO pending_updates (user_id, client_name, request_type, transaction_number, status, last_updated, details) VALUES (?, ?, ?, ?, ?, ?, ?)");
+    $insert->bind_param("issssss", $form['user_id'], $clientName, $form['type'], $form['transaction_number'], $status, $now, $details);
+    $insert->execute();
+    $insert->close();
+}
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -211,6 +231,12 @@ if (!$result) {
         <div class="request-card">
             <h3><?= htmlspecialchars($r['full_name']) ?></h3>
             <p>Type: <?= htmlspecialchars($r['type']) ?></p>
+
+            <?php if (!empty($r['transaction_number'])): ?>
+                <p style="color:#00ffcc;">
+                    Transaction #: <strong><?= htmlspecialchars($r['transaction_number']) ?></strong>
+                </p>
+            <?php endif; ?>
 
             <?php if ($r['type'] === 'Land Survey'): ?>
                 <p>Location: <?= htmlspecialchars($r['ls_location']) ?></p>

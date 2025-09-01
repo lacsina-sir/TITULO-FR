@@ -1,4 +1,5 @@
 <?php
+// reject.php
 header('Content-Type: application/json');
 
 $host = "localhost";
@@ -7,28 +8,26 @@ $pass = "";
 $db   = "titulo_db";
 
 $conn = new mysqli($host, $user, $pass, $db);
-if ($conn->connect_error) {
-    echo json_encode(['success' => false, 'error' => 'Database connection failed']);
-    exit;
-}
+if ($conn->connect_error) exit(json_encode(['success'=>false,'error'=>'DB connection failed']));
 
-$id = isset($_POST['id']) ? intval($_POST['id']) : 0;
-$reason = isset($_POST['reason']) ? trim($_POST['reason']) : '';
+$id = intval($_POST['id'] ?? 0);
+$reason = trim($_POST['reason'] ?? '');
 
-if ($id <= 0 || empty($reason)) {
-    echo json_encode(['success' => false, 'error' => 'Invalid input']);
-    exit;
-}
+if ($id <= 0 || empty($reason)) exit(json_encode(['success'=>false,'error'=>'Invalid input']));
 
-$stmt = $conn->prepare("UPDATE client_forms SET status = 'rejected', rejection_reason = ? WHERE id = ?");
-$stmt->bind_param("si", $reason, $id);
+// Get form details
+$form = $conn->query("SELECT * FROM client_forms WHERE id = $id")->fetch_assoc();
+$details = json_encode($form);
 
-if ($stmt->execute()) {
-    echo json_encode(['success' => true]);
-} else {
-    echo json_encode(['success' => false, 'error' => $conn->error]);
-}
-
+// Insert into rejected_requests
+$stmt = $conn->prepare("INSERT INTO rejected_requests (client_name, type, reason, details, rejected_at) VALUES (?, ?, ?, ?, NOW())");
+$stmt->bind_param("ssss", $form['name'] . ' ' . $form['last_name'], $form['type'], $reason, $details);
+$stmt->execute();
 $stmt->close();
+
+// Update client_forms status
+$conn->query("UPDATE client_forms SET status='Rejected', rejection_reason='".$conn->real_escape_string($reason)."' WHERE id=$id");
+
+echo json_encode(['success'=>true]);
 $conn->close();
 ?>

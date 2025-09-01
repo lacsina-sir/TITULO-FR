@@ -10,8 +10,12 @@ if ($conn->connect_error) {
   die("Connection failed: " . $conn->connect_error);
 }
 
-$sql = "SELECT * FROM pending_updates WHERE is_done = 0 ORDER BY last_updated DESC";
+$sql = "SELECT * FROM pending_updates ORDER BY last_updated DESC";
 $result = $conn->query($sql);
+
+// Fetch rejected requests
+$rejected_sql = "SELECT * FROM rejected_requests ORDER BY rejected_at DESC";
+$rejected_result = $conn->query($rejected_sql);
 ?>
 
 <!DOCTYPE html>
@@ -144,6 +148,29 @@ $result = $conn->query($sql);
         box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
         animation: fadeIn 1s ease-in-out;
     }
+
+    #toggleRejectedBtn {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: none;
+      color: #00ffff;
+      border: 2px solid #00ffff;
+      padding: 8px 16px;
+      font-size: 14px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    #toggleRejectedBtn:hover {
+      background-color: #00ffff;
+      color: #000;
+      box-shadow: 0 0 8px rgba(0, 255, 255, 0.6);
+    }
+
+    #toggleRejectedBtn:active {
+      transform: scale(0.95);
+    }
+
   </style>
 </head>
 <body>
@@ -159,42 +186,115 @@ $result = $conn->query($sql);
   </div>
 
   <div class="container">
-    <h1>Pending Updates</h1>
+    <h1>Client Updates</h1>
     <div class="search-bar">
       <input type="text" placeholder="Search pending updates...">
     </div>
 
-    <?php if ($result && $result->num_rows > 0): ?>
+  <?php if ($result && $result->num_rows > 0): ?>
+    <table>
+      <thead>
+        <tr>
+          <th>Client Name</th>
+          <th>Status</th>
+          <th>Last Updated</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <?php while ($row = $result->fetch_assoc()): ?>
+        <tr>
+          <td colspan="4">
+            <div class="update-card">
+              <h3><?= htmlspecialchars($row['client_name']) ?> — <?= htmlspecialchars($row['request_type']) ?></h3>
+              <p>Transaction #: <strong><?= htmlspecialchars($row['transaction_number']) ?></strong></p>
+              <p>Status: <span style="color:#00cc66;font-weight:bold;"><?= htmlspecialchars($row['status']) ?></span></p>
+              <p>Last Updated: <?= date('F j, Y, g:i a', strtotime($row['last_updated'])) ?></p>
+
+              <?php 
+                $details = json_decode($row['details'], true);
+                if (is_array($details)) {
+                  foreach ($details as $key => $val) {
+                    if (!is_array($val) && $val !== '') {
+                      echo '<strong>' . htmlspecialchars($key) . ':</strong> ' . htmlspecialchars($val) . '<br>';
+                    }
+                  }
+                }
+              ?>
+              <form method="post" action="update_pending_status.php" style="margin-top:10px;">
+                <input type="hidden" name="id" value="<?= $row['id'] ?>">
+                <button type="submit" name="edit">Edit</button>
+                <button type="submit" name="mark_done">Mark as Done</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        <?php endwhile; ?>
+      </tbody>
+    </table>
+  <?php else: ?>
+    <p class="container-one">No pending updates found.</p>
+  <?php endif; ?>
+
+
+  <div class="button-row">
+    <button id="toggleRejectedBtn">Show Rejected Requests</button>
+  </div>
+
+
+  <div id="rejectedSection" class="container-one" style="display: none;">
+    <h2>Rejected Requests</h2>
+    <?php if ($rejected_result && $rejected_result->num_rows > 0): ?>
       <table>
         <thead>
           <tr>
             <th>Client Name</th>
-            <th>Status</th>
-            <th>Last Updated</th>
-            <th>Actions</th>
+            <th>Type</th>
+            <th>Reason</th>
+            <th>Details</th>
+            <th>Rejected At</th>
           </tr>
         </thead>
         <tbody>
-          <?php while ($row = $result->fetch_assoc()): ?>
+          <?php while ($r = $rejected_result->fetch_assoc()): ?>
             <tr>
-              <td><?= htmlspecialchars($row['client_name']) ?></td>
-              <td><?= htmlspecialchars($row['status']) ?></td>
-              <td><?= date('F j, Y', strtotime($row['last_updated'])) ?></td>
-              <td class="actions">
-                <form method="post" action="update_pending_status.php" style="display:inline;">
-                  <input type="hidden" name="id" value="<?= $row['id'] ?>">
-                  <button type="submit" name="edit">Edit</button>
-                  <button type="submit" name="mark_done">Mark as Done</button>
-                </form>
+              <td><?= htmlspecialchars($r['client_name']) ?></td>
+              <td><?= htmlspecialchars($r['type']) ?></td>
+              <td><?= htmlspecialchars($r['reason']) ?></td>
+              <td>
+                <?php 
+                  $details = json_decode($r['details'], true);
+                  if (is_array($details)) {
+                    foreach ($details as $key => $val) {
+                      if (!is_array($val) && $val !== '') {
+                        echo '<strong>' . htmlspecialchars($key) . ':</strong> ' . htmlspecialchars($val) . '<br>';
+                      }
+                    }
+                  }
+                ?>
               </td>
+              <td><?= date('F j, Y, g:i a', strtotime($r['rejected_at'])) ?></td>
             </tr>
           <?php endwhile; ?>
         </tbody>
       </table>
     <?php else: ?>
-      <p class="container-one">No pending updates found.</p>
+      <p>No rejected requests found.</p>
     <?php endif; ?>
   </div>
+
+<script>
+  document.getElementById("toggleRejectedBtn").addEventListener("click", function(){
+      const section = document.getElementById("rejectedSection");
+      if (section.style.display === "none") {
+          section.style.display = "block";
+          this.textContent = "Hide Rejected Requests";
+      } else {
+          section.style.display = "none";
+          this.textContent = "Show Rejected Requests";
+      }
+  });
+</script>
 
 </body>
 </html>

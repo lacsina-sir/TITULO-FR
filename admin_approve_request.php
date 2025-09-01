@@ -20,8 +20,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id'])) {
     $update->close();
 
     // Get form details for update
-    $getForm = $conn->prepare("SELECT user_id, type, location, others_text, file_path FROM client_forms WHERE id = ?");
-    $getForm->bind_param("i", $id);
+    $insert = $conn->prepare("INSERT INTO pending_updates (client_name, status, last_updated, transaction_number, request_type) VALUES (?, ?, ?, ?, ?)");
+    $insert->bind_param("sssss", $clientName, $status, $now, $form['transaction_number'], $form['type']);
     $getForm->execute();
     $formResult = $getForm->get_result();
     $form = $formResult->fetch_assoc();
