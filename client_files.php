@@ -138,7 +138,6 @@
     <div class="nav-links">
       <a href="client_dashboard.php">Dashboard</a>
       <a href="client_files.php">Files</a>
-      <a href="client_profile.php">Profile</a>
       <a href="client_form.php">Forms</a>
       <a href="client-side_tracking.php">Tracking</a>
       <a href="index.php">Logout</a>

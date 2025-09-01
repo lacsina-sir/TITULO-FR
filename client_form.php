@@ -10,6 +10,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $type = $conn->real_escape_string($_POST['type']);
     $status = 'pending';
 
+    // Generate unique transaction number
+    $transaction_number = generateTransactionNumber($conn);
+
     // Initialize variables
     $ls_location = $ls_area = $ls_purpose = '';
     $sp_location = $sp_use = '';
@@ -61,21 +64,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $file_paths_json = json_encode($file_paths);
     // Insert into database
     $sql = "INSERT INTO client_forms (
-        user_id, name, last_name, type, date, status,
+        user_id, name, last_name, type, date, status, transaction_number,
         ls_location, ls_area, ls_purpose, ls_specify_text,
         sp_location, sp_use, sp_specify_text,
         tt_owner, tt_reason, tt_specify_text,
         fu_ref, fu_details,
         inquiry_details, file_paths
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     $stmt = $conn->prepare($sql);
     if ($stmt === false) {
         die('Prepare failed: ' . $conn->error);
     }
 
-    $stmt->bind_param("isssssssssssssssssss",
-        $user_id, $name, $last_name, $type, $date, $status,
+    $stmt->bind_param("issssssssssssssssssss",
+        $user_id, $name, $last_name, $type, $date, $status, $transaction_number,
         $ls_location, $ls_area, $ls_purpose, $ls_specify_text,
         $sp_location, $sp_use, $sp_specify_text,
         $tt_owner, $tt_reason, $tt_specify_text,
@@ -89,8 +92,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     echo "<script>
         document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('popupOverlay').style.display = 'flex';
+            document.getElementById('txnDisplay').innerText = '" . addslashes($transaction_number) . "';
         });
     </script>";
+}
+
+function generateTransactionNumber($conn) {
+    do {
+        $prefix = 'TXN';
+        $random = strtoupper(bin2hex(random_bytes(3)));
+        $txn = $prefix . '-' . date('ymd') . '-' . $random;
+
+        $check = $conn->prepare("SELECT id FROM client_forms WHERE transaction_number = ?");
+        if (!$check) {
+            die("Prepare failed: " . $conn->error);
+        }
+
+        $check->bind_param("s", $txn);
+        $check->execute();
+        $check->store_result();
+    } while ($check->num_rows > 0);
+
+    return $txn;
 }
 ?>
 
@@ -225,7 +248,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <div class="nav-links">
     <a href="client_dashboard.php">Dashboard</a>
     <a href="client_files.php">Files</a>
-    <a href="client_profile.php">Profile</a>
     <a href="client_form.php">Forms</a>
     <a href="client-side_tracking.php">Tracking</a>
     <a href="index.php">Logout</a>
@@ -350,7 +372,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <!-- Popup Message -->
 <div id="popupOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); justify-content:center; align-items:center; z-index:2000;">
     <div style="background:#fff; padding:30px 40px; border-radius:12px; text-align:center; max-width:400px; box-shadow:0 8px 20px rgba(0,0,0,0.3);">
-        <h2 style="color:#2c5364; margin-bottom:20px;">Successfully Submitted</h2>
+        <h2 style="color:#2c5364; margin-bottom:15px;">Successfully Submitted!</h2>
+        <p style="color:#2c5364; font-size:16px; margin-bottom:20px;">
+            Your Transaction Number is:<br>
+            <strong style="color:#00aa88; font-size:18px;" id="txnDisplay"></strong>
+        </p>
         <button onclick="window.location.href='client_dashboard.php'" style="padding:10px 20px; background:#00ffcc; border:none; border-radius:8px; font-weight:bold; color:#222; cursor:pointer;">OK</button>
     </div>
 </div>

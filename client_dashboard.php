@@ -21,6 +21,7 @@ $stmt = $conn->prepare($query);
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
 $result = $stmt->get_result();
+
 ?>
 
 <!DOCTYPE html>
@@ -224,7 +225,6 @@ $result = $stmt->get_result();
     <div class="nav-links">
       <a href="client_dashboard.php">Dashboard</a>
       <a href="client_files.php">Files</a>
-      <a href="client_profile.php">Profile</a>
       <a href="client_form.php">Forms</a>
       <a href="client-side_tracking.php">Tracking</a>
       <a href="index.php">Logout</a>
@@ -276,87 +276,100 @@ $result = $stmt->get_result();
                   $statusLabel = 'Rejected';
                 }
               ?>
-              Status: <span style="color:<?php echo $statusColor; ?>; font-weight:bold;"> <?php echo $statusLabel; ?> </span><br>
+              Status: <span style="color:<?php echo $statusColor; ?>; font-weight:bold;"> 
+                  <?php echo $statusLabel; ?> 
+              </span><br>
+
+              <?php if (!empty($row['transaction_number'])): ?>
+                  <span style="color:#00ffcc;">
+                      Transaction #: <strong><?php echo htmlspecialchars($row['transaction_number']); ?></strong>
+                  </span><br>
+              <?php endif; ?>
+
               Date Submitted: <?php echo htmlspecialchars($row['date']); ?>
+
               <?php if ($status === 'rejected' && !empty($row['rejection_reason'])): ?>
-                <br><span style="color:#ff3333;font-weight:bold;">Reason: <?php echo htmlspecialchars($row['rejection_reason']); ?></span>
-              <?php endif; ?>
-            </p>
-            <?php if ($row['type'] === 'Land Survey'): ?>
-              <?php if (!empty($row['ls_location'])): ?><p>Location: <?php echo htmlspecialchars($row['ls_location']); ?></p><?php endif; ?>
-              <?php if (!empty($row['ls_area'])): ?><p>Lot Size / Area: <?php echo htmlspecialchars($row['ls_area']); ?> sqm</p><?php endif; ?>
-              <?php if (!empty($row['ls_purpose'])): ?>
-                  <p>Purpose: <?php echo ($row['ls_purpose'] === 'Others' && !empty($row['ls_specify_text'])) 
-                      ? htmlspecialchars($row['ls_specify_text']) 
-                      : (($row['ls_purpose'] === 'Others') ? '' : htmlspecialchars($row['ls_purpose'])); ?></p>
+                  <br><span style="color:#ff3333;font-weight:bold;">
+                      Reason: <?php echo htmlspecialchars($row['rejection_reason']); ?>
+                  </span>
               <?php endif; ?>
 
-            <?php elseif ($row['type'] === 'Sketch Plan'): ?>
-              <?php if (!empty($row['sp_location'])): ?><p>Location: <?php echo htmlspecialchars($row['sp_location']); ?></p><?php endif; ?>
-              <?php if (!empty($row['sp_use'])): ?>
-                  <p>Intended Use: <?php echo ($row['sp_use'] === 'Others' && !empty($row['sp_specify_text'])) 
-                      ? htmlspecialchars($row['sp_specify_text']) 
-                      : (($row['sp_use'] === 'Others') ? '' : htmlspecialchars($row['sp_use'])); ?></p>
+              <?php if ($row['type'] === 'Land Survey'): ?>
+                <?php if (!empty($row['ls_location'])): ?><p>Location: <?php echo htmlspecialchars($row['ls_location']); ?></p><?php endif; ?>
+                <?php if (!empty($row['ls_area'])): ?><p>Lot Size / Area: <?php echo htmlspecialchars($row['ls_area']); ?> sqm</p><?php endif; ?>
+                <?php if (!empty($row['ls_purpose'])): ?>
+                    <p>Purpose: <?php echo ($row['ls_purpose'] === 'Others' && !empty($row['ls_specify_text'])) 
+                        ? htmlspecialchars($row['ls_specify_text']) 
+                        : (($row['ls_purpose'] === 'Others') ? '' : htmlspecialchars($row['ls_purpose'])); ?></p>
+                <?php endif; ?>
+
+              <?php elseif ($row['type'] === 'Sketch Plan'): ?>
+                <?php if (!empty($row['sp_location'])): ?><p>Location: <?php echo htmlspecialchars($row['sp_location']); ?></p><?php endif; ?>
+                <?php if (!empty($row['sp_use'])): ?>
+                    <p>Intended Use: <?php echo ($row['sp_use'] === 'Others' && !empty($row['sp_specify_text'])) 
+                        ? htmlspecialchars($row['sp_specify_text']) 
+                        : (($row['sp_use'] === 'Others') ? '' : htmlspecialchars($row['sp_use'])); ?></p>
+                <?php endif; ?>
+
+              <?php elseif ($row['type'] === 'Title Transfer'): ?>
+                <?php if (!empty($row['tt_owner'])): ?><p>Current Title Owner: <?php echo htmlspecialchars($row['tt_owner']); ?></p><?php endif; ?>
+                <?php if (!empty($row['tt_reason'])): ?>
+                    <p>Reason for Transfer: <?php echo ($row['tt_reason'] === 'Others' && !empty($row['tt_specify_text'])) 
+                        ? htmlspecialchars($row['tt_specify_text']) 
+                        : (($row['tt_reason'] === 'Others') ? '' : htmlspecialchars($row['tt_reason'])); ?></p>
+                <?php endif; ?>
+
+                  <?php elseif ($row['type'] === 'Follow Up'): ?>
+                <?php if (!empty($row['fu_ref'])): ?><p>Reference Number / Transaction ID: <?php echo htmlspecialchars($row['fu_ref']); ?></p><?php endif; ?>
+                <?php if (!empty($row['fu_details'])): ?><p>Follow-Up Details: <?php echo htmlspecialchars($row['fu_details']); ?></p><?php endif; ?>
               <?php endif; ?>
 
-            <?php elseif ($row['type'] === 'Title Transfer'): ?>
-              <?php if (!empty($row['tt_owner'])): ?><p>Current Title Owner: <?php echo htmlspecialchars($row['tt_owner']); ?></p><?php endif; ?>
-              <?php if (!empty($row['tt_reason'])): ?>
-                  <p>Reason for Transfer: <?php echo ($row['tt_reason'] === 'Others' && !empty($row['tt_specify_text'])) 
-                      ? htmlspecialchars($row['tt_specify_text']) 
-                      : (($row['tt_reason'] === 'Others') ? '' : htmlspecialchars($row['tt_reason'])); ?></p>
-              <?php endif; ?>
-
-                <?php elseif ($row['type'] === 'Follow Up'): ?>
-              <?php if (!empty($row['fu_ref'])): ?><p>Reference Number / Transaction ID: <?php echo htmlspecialchars($row['fu_ref']); ?></p><?php endif; ?>
-              <?php if (!empty($row['fu_details'])): ?><p>Follow-Up Details: <?php echo htmlspecialchars($row['fu_details']); ?></p><?php endif; ?>
-            <?php endif; ?>
-
-            <?php if (!empty($row['inquiry_details'])): ?><p>Inquiry: <?php echo htmlspecialchars($row['inquiry_details']); ?></p><?php endif; ?>
-            <?php if (!empty($row['file_paths'])):
-              $files = json_decode($row['file_paths'], true);
-              if ($files && is_array($files)):
-                foreach ($files as $file): ?>
-                  <p>File: <a href="<?php echo htmlspecialchars($file); ?>" style="color:#00ffcc;" target="_blank">Download</a></p>
-                <?php endforeach;
-              endif;
-            endif; ?>
-          </div>
-        <?php endwhile; ?>
-      <?php else: ?>
-        <div class="update-card">
-          <h3>No forms submitted yet.</h3>
+              <?php if (!empty($row['inquiry_details'])): ?><p>Inquiry: <?php echo htmlspecialchars($row['inquiry_details']); ?></p><?php endif; ?>
+              <?php if (!empty($row['file_paths'])):
+                $files = json_decode($row['file_paths'], true);
+                if ($files && is_array($files)):
+                  foreach ($files as $file): ?>
+                    <p>File: <a href="<?php echo htmlspecialchars($file); ?>" style="color:#00ffcc;" target="_blank">Download</a></p>
+                  <?php endforeach;
+                endif;
+              endif; ?>
+            </div>
+          <?php endwhile; ?>
+          <?php else: ?>
+            <div class="update-card">
+              <h3>No forms submitted yet.</h3>
+            </div>
+          <?php endif; ?>
         </div>
-      <?php endif; ?>
-    </div>
-  </div>
+      </div>
 
-  <div class="chatbot-btn" id="chatbotBtn" title="Chat-Admin">
-    <svg viewBox="0 0 24 24"><path d="M12 3C7.03 3 3 6.58 3 11c0 2.39 1.19 4.54 3.17 6.13L5 21l4.13-1.17C10.73 20.61 11.36 21 12 21c4.97 0 9-3.58 9-8s-4.03-8-9-8zm0 16c-.52 0-1.03-.07-1.52-.19l-.36-.09-2.44.69.69-2.44-.09-.36C6.07 15.03 5 13.13 5 11c0-3.31 3.58-6 8-6s8 2.69 8 6-3.58 6-8 6z"/></svg>
-  </div>
+      <div class="chatbot-btn" id="chatbotBtn" title="Chat-Admin">
+        <svg viewBox="0 0 24 24"><path d="M12 3C7.03 3 3 6.58 3 11c0 2.39 1.19 4.54 3.17 6.13L5 21l4.13-1.17C10.73 20.61 11.36 21 12 21c4.97 0 9-3.58 9-8s-4.03-8-9-8zm0 16c-.52 0-1.03-.07-1.52-.19l-.36-.09-2.44.69.69-2.44-.09-.36C6.07 15.03 5 13.13 5 11c0-3.31 3.58-6 8-6s8 2.69 8 6-3.58 6-8 6z"/></svg>
+      </div>
 
 
-  <div class="chatbot-modal" id="chatbotModal">
-    <iframe src="client_chatbot.php" class="chatbot-iframe"></iframe>
-  </div>
+      <div class="chatbot-modal" id="chatbotModal">
+        <iframe src="client_chatbot.php" class="chatbot-iframe"></iframe>
+      </div>
 
-  <script>
-  const chatbotBtn = document.getElementById('chatbotBtn');
-  const chatbotModal = document.getElementById('chatbotModal');
+      <script>
+        
+      const chatbotBtn = document.getElementById('chatbotBtn');
+      const chatbotModal = document.getElementById('chatbotModal');
 
-  chatbotBtn.onclick = function() {
-    chatbotModal.classList.add('active');
-    chatbotBtn.classList.add('hide');
-  };
+      chatbotBtn.onclick = function() {
+        chatbotModal.classList.add('active');
+        chatbotBtn.classList.add('hide');
+      };
 
-  // Listen for close message from iframe
-  window.addEventListener('message', function(event) {
-    if (event.data === 'closeChatbot') {
-      chatbotModal.classList.remove('active');
-      chatbotBtn.classList.remove('hide');
-    }
-  });
-</script>
+      // Listen for close message from iframe
+      window.addEventListener('message', function(event) {
+        if (event.data === 'closeChatbot') {
+          chatbotModal.classList.remove('active');
+          chatbotBtn.classList.remove('hide');
+        }
+      });
+    </script>
 </body>
 </html>
 
