@@ -1,348 +1,495 @@
 <?php
 session_start();
-
-// Database connection
 $conn = new mysqli("localhost", "root", "", "titulo_db");
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
+if ($conn->connect_error) die("Connection failed: " . $conn->connect_error);
 
 $clientResult = $conn->query("
-    SELECT DISTINCT c.id, c.name 
-    FROM chat_messages m 
-    JOIN clients c ON m.client_id = c.id 
-    ORDER BY m.id DESC
+    SELECT u.id, CONCAT(u.first_name, ' ', u.last_name) AS name,
+            (SELECT message FROM chat_messages WHERE user_id = u.id ORDER BY created_at DESC LIMIT 1) AS last_message
+    FROM users u
+    ORDER BY u.first_name ASC
 ");
 
+$user_first_name = $_SESSION['first_name'] ?? 'Client';
 $clients = [];
-if ($clientResult) {
+    if ($clientResult) {
     while ($row = $clientResult->fetch_assoc()) {
         $clients[] = $row;
     }
-}
+    }
 ?>
+
+
 <!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8" />
-<title>Admin Chat</title>
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<style>
-/* kept your original look, minimal changes */
-body {
-    margin: 0;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
-    color: #fff;
-    display: flex;
-    height: 100vh;
-}
-
-/* Left clients column */
-.sidebar {
-    width: 260px;
-    background-color: #111;
-    padding: 20px;
-    overflow-y: auto;
-    box-sizing: border-box;
-}
-
-/* small hamburger (toggles admin nav) */
-.hamburger {
-    width: 40px;
-    height: 30px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: flex-start;
-    cursor: pointer;
-    margin-bottom: 18px;
-}
-.hamburger span {
-    display: block;
-    width: 28px;
-    height: 4px;
-    background: #00bcd4;
-    margin: 4px 0;
-    border-radius: 2px;
-    transition: 0.3s;
-}
-.hamburger:hover span { background: #fff; }
-
-.client {
-    display: flex;
-    align-items: center;
-    padding: 10px;
-    margin-bottom: 10px;
-    background-color: #1e1e2f;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: background 0.3s;
-}
-.client:hover { background-color: #2c3e50; }
-
-.client-name { font-size: 16px; color: #fff; }
-
-/* admin nav that slides in/out (independent) */
-.sidebar-nav {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 220px;
-    height: 100vh;
-    background: rgba(20, 32, 44, 0.98);
-    box-shadow: 2px 0 16px rgba(0,0,0,0.18);
-    z-index: 9999;
-    transform: translateX(-100%);
-    transition: transform 0.3s;
-}
-.sidebar-nav.active { transform: translateX(0); }
-.sidebar-nav-content { display:flex; flex-direction:column; padding:40px 24px; gap:18px; align-items:left; }
-.sidebar-nav-content .admin-text { font-size:22px; color:#00bcd4; margin-bottom:20px; text-align:center; }
-.sidebar-nav-content a { color:#00bcd4; text-decoration:none; font-size:18px; font-weight:bold; padding:8px 0; transition: color 0.2s; }
-.sidebar-nav-content a:hover { color:#fff; }
-
-/* Chat area */
-.chat-area {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    padding: 20px;
-    box-sizing: border-box;
-}
-.chat-header { font-size: 20px; margin-bottom: 10px; color: #00ffff; }
-.chat-box {
-    flex: 1;
-    background-color: rgba(255,255,255,0.05);
-    border-radius: 10px;
-    padding: 20px;
-    overflow-y: auto;
-}
-.message {
-    max-width: 60%;
-    margin-bottom: 15px;
-    padding: 12px 16px;
-    border-radius: 16px;
-    font-size: 15px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-    word-break: break-word;
-}
-.message.client { background-color: #2c3e50; color: #fff; align-self: flex-start; border-bottom-left-radius: 6px; }
-.message.admin  { background-color: #00bcd4; color: #000; align-self: flex-end; border-bottom-right-radius: 6px; }
-
-.chat-input { display:flex; margin-top:10px; }
-.chat-input input {
-    flex: 1;
-    padding: 10px;
-    border-radius: 8px;
-    border: none;
-    background-color: #333;
-    color: #fff;
-    outline: none;
-}
-.chat-input button {
-    padding: 10px 20px;
-    background-color: #00bcd4;
-    border: none;
-    border-radius: 8px;
-    color: #000;
-    font-weight: bold;
-    cursor: pointer;
-    margin-left: 10px;
-}
-.chat-input button:hover { background-color: #0097a7; }
-
-/* small responsive tweaks */
-@media (max-width: 800px) {
-    .sidebar { width: 220px; }
-}
-</style>
-</head>
-<body>
-
-    <!-- Clients column -->
-    <div class="sidebar">
-        <div class="hamburger" id="hamburgerMenu" title="Menu">
-            <span></span><span></span><span></span>
-        </div>
-
-        <h2>Clients</h2>
-        <?php foreach ($clients as $client): ?>
-            <div class="client" data-id="<?= $client['id'] ?>" data-name="<?= htmlspecialchars($client['name'], ENT_QUOTES) ?>">
-                <div class="client-name"><?= htmlspecialchars($client['name']) ?></div>
-            </div>
-        <?php endforeach; ?>
-    </div>
-
-    <!-- Slide-in admin nav (toggled by hamburger) -->
-    <div class="sidebar-nav" id="sidebarNav" aria-hidden="true">
-        <div class="sidebar-nav-content">
-            <h2 class="admin-text">Titulo Admin</h2>
-            <a href="admin_dashboard.php">Dashboard</a>
-            <a href="admin_client_request.php">Client Requests</a>
-            <a href="admin_client_updates.php">Client Updates</a>
-            <a href="transaction_files.php">Survey Files</a>
-            <a href="admin_chat.php" class="active">Chat</a>
-            <a href="index.php">Logout</a>
-        </div>
-    </div>
-
-    <!-- Chat area -->
-    <div class="chat-area">
-        <div class="chat-header" id="chatHeader">Select a client to start chatting</div>
-
-        <div class="chat-box" id="chatBox">
-            <div style="color:#aaa; text-align:center; margin-top:40px;">Select a client to view messages.</div>
-        </div>
-
-        <div id="chatInputContainer"></div>
-    </div>
-
-<script>
-// ---- DOM refs ----
-const chatBox = document.getElementById('chatBox');
-const chatInputContainer = document.getElementById('chatInputContainer');
-const chatHeader = document.getElementById('chatHeader');
-const sidebarNav = document.getElementById('sidebarNav');
-const hamburgerMenu = document.getElementById('hamburgerMenu');
-
-let selectedClientId = null;
-let lastTimestamp = "0000-00-00 00:00:00";
-let pollIntervalId = null;
-
-// render a single message into chatBox
-function renderMessage(msg) {
-    const div = document.createElement('div');
-    // guard keys in case server returns slightly different names
-    const sender = msg.sender || msg.from || 'client';
-    div.className = 'message ' + (sender === 'admin' ? 'admin' : 'client');
-
-    const label = document.createElement('span');
-    label.style.fontWeight = 'bold';
-    label.style.color = sender === 'client' ? '#00bcd4' : '#0097a7';
-    const name = msg.name || msg.client_name || (sender === 'admin' ? 'Admin' : 'Client');
-    label.textContent = sender === 'client' ? (name + ': ') : 'Admin: ';
-    div.appendChild(label);
-
-    // message text
-    const textNode = document.createTextNode((msg.message || msg.text || '') + ' ');
-    div.appendChild(textNode);
-
-    // optional timestamp
-    if (msg.timestamp) {
-        const t = document.createElement('div');
-        t.style.fontSize = '12px';
-        t.style.opacity = '0.7';
-        t.textContent = msg.timestamp;
-        div.appendChild(t);
-    }
-
-    chatBox.appendChild(div);
-}
-
-// fetch messages from server for selected client
-async function fetchMessages() {
-    if (!selectedClientId) return;
-    try {
-        const res = await fetch(`get_messages.php?client_id=${encodeURIComponent(selectedClientId)}&lastTimestamp=${encodeURIComponent(lastTimestamp)}`);
-        if (!res.ok) throw new Error('Network error: ' + res.status);
-        const messages = await res.json();
-        if (!Array.isArray(messages)) return;
-
-        // append and update lastTimestamp if provided
-        messages.forEach(msg => {
-            renderMessage(msg);
-            if (msg.timestamp) lastTimestamp = msg.timestamp;
-        });
-
-        // scroll to bottom
-        chatBox.scrollTop = chatBox.scrollHeight;
-    } catch (err) {
-        console.error('fetchMessages error:', err);
-    }
-}
-
-// create and attach chat input form
-function createChatForm() {
-    chatInputContainer.innerHTML = `
-        <form class="chat-input" id="chatForm" autocomplete="off">
-            <input type="text" id="messageInput" name="message" placeholder="Type your message..." required />
-            <button type="submit">Send</button>
-        </form>
-    `;
-    const chatForm = document.getElementById('chatForm');
-    const messageInput = document.getElementById('messageInput');
-
-    chatForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const message = messageInput.value.trim();
-        if (!message) return;
-
-        try {
-            const formData = new FormData();
-            formData.append('message', message);
-            formData.append('sender', 'admin');
-            formData.append('client_id', selectedClientId);
-
-            const res = await fetch('send_message.php', { method: 'POST', body: formData });
-            const result = await res.json();
-
-            if (result && result.success) {
-                // optimistic render
-                const now = new Date();
-                const ts = now.toISOString().slice(0,19).replace('T',' ');
-                renderMessage({ sender: 'admin', message: message, timestamp: ts });
-                chatBox.scrollTop = chatBox.scrollHeight;
-                messageInput.value = '';
-            } else {
-                alert(result && result.error ? result.error : 'Failed to send message');
-            }
-        } catch (err) {
-            console.error('send message error', err);
-            alert('Network error, message not sent.');
+    <html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <title>Admin Chat | Titulo</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <style>
+        /* --- General Layout --- */
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
+            color: #fff;
+            display: flex;
+            height: 100vh;
         }
-    });
-}
 
-// attach click handlers to client items
-document.querySelectorAll('.client').forEach(clientEl => {
-    clientEl.addEventListener('click', async () => {
-        selectedClientId = clientEl.dataset.id;
-        const clientName = clientEl.dataset.name || 'Client';
+        .sidebar {
+            width: 220px;
+            background-color: #111;
+            height: 100vh;
+            padding-top: 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            overflow-y: auto;
+        }
 
-        // update header and clear previous messages
-        chatHeader.textContent = `Chat with ${clientName}`;
-        chatBox.innerHTML = '<div style="color:#aaa; text-align:center; margin-top:12px;">Loading messages...</div>';
+        .sidebar h2 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 22px;
+            color: #00bcd4;
+        }
 
-        // reset lastTimestamp for fresh fetch
-        lastTimestamp = "0000-00-00 00:00:00";
+        .sidebar a {
+            display: block;
+            padding: 15px 20px;
+            color: #bbb;
+            text-decoration: none;
+            transition: 0.3s;
+        }
 
-        // create input and fetch
-        createChatForm();
-        chatBox.innerHTML = '';
-        await fetchMessages();
+        .sidebar a:hover {
+            background-color: #333;
+            color: #fff;
+        }
 
-        // start polling (only one interval)
-        if (pollIntervalId) clearInterval(pollIntervalId);
-        pollIntervalId = setInterval(fetchMessages, 3000);
-    });
-});
+        .sidebar a.active {
+            background-color: #00ffff;
+            color: #000;
+        }
 
-// hamburger toggles admin nav (won't affect chat)
-hamburgerMenu.addEventListener('click', () => {
-    sidebarNav.classList.toggle('active');
-    sidebarNav.setAttribute('aria-hidden', !sidebarNav.classList.contains('active'));
-});
+        /* --- Main Chat Layout --- */
+        .main {
+            margin-left: 220px;
+            display: flex;
+            width: calc(100% - 220px);
+            height: 100vh;
+        }
 
-// close admin nav when clicking outside
-document.addEventListener('click', (e) => {
-    const isInside = sidebarNav.contains(e.target) || hamburgerMenu.contains(e.target);
-    if (!isInside && sidebarNav.classList.contains('active')) {
-        sidebarNav.classList.remove('active');
-        sidebarNav.setAttribute('aria-hidden', 'true');
-    }
-});
-</script>
+        /* Left column: Client list */
+        .client-list {
+            width: 300px;
+            background-color: #111827;
+            padding: 20px;
+            overflow-y: auto;
+            border-right: 2px solid #00bcd4;
+        }
 
-</body>
+        .client-list h3 {
+            text-align: center;
+            color: #00ffff;
+            margin-bottom: 20px;
+        }
+
+        .client {
+            background-color: #1f2937;
+            border-radius: 8px;
+            padding: 10px 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .client:hover {
+            background-color: #2c3e50;
+        }
+
+        .client .name {
+            font-size: 16px;
+            font-weight: bold;
+            color: #00bcd4;
+        }
+
+        .client .message-preview {
+            font-size: 13px;
+            color: #ccc;
+        }
+
+        /* Right column: Chat area */
+        .chat-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+        }
+
+        .chat-header {
+            font-size: 20px;
+            color: #00ffff;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #00bcd4;
+            padding-bottom: 8px;
+        }
+
+        .chat-box {
+            flex: 1;
+            background-color: rgba(255,255,255,0.05);
+            border-radius: 10px;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Chat message styles */
+        .message {
+            display: flex;
+            flex-direction: column;
+            max-width: 60%;
+            margin-bottom: 15px;
+            padding: 12px 16px;
+            border-radius: 12px;
+            word-break: break-word;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+            position: relative;
+        }
+
+        /* Client messages (left) */
+        .message.client {
+            background-color: #2c3e50;
+            color: #fff;
+            align-self: flex-start;
+        }
+
+        /* Admin messages (right) */
+        .message.admin {
+            background-color: #00bcd4;
+            color: #000;
+            align-self: flex-end;
+        }
+
+        /* Name on top of message */
+        .message .sender-name {
+            font-weight: bold;
+            font-size: 14px;
+            margin-bottom: 5px;
+            display: none;
+        }
+
+        /* Timestamp below message */
+        .message .timestamp {
+            display: none;
+            font-size: 12px;
+            opacity: 0.7;
+            margin-top: 4px;
+        }
+
+        /* Timestamp outside bubble */
+        .timestamp-outside {
+            font-size: 12px;
+            color: #aaa;
+            margin: 2px 0 10px 0;
+            background: none;
+            box-shadow: none;
+            padding: 0;
+            max-width: 60%;
+        }
+
+        /* Align left or right */
+        .timestamp-outside.admin {
+            text-align: right;
+            margin-left: auto;
+            margin-right: 0;
+        }
+
+        .timestamp-outside.client {
+            text-align: left;
+            margin-left: 0;
+            margin-right: auto;
+        }
+
+        .timestamp-outside.admin {
+            text-align: right;
+        }
+
+        .timestamp-outside.client {
+            text-align: left;
+        }
+
+        /* Date separator */
+        .date-separator {
+            text-align: center;
+            margin: 15px 0;
+            font-size: 13px;
+            color: #aaa;
+        }
+
+        .chat-input {
+            display: flex;
+            align-items: center;
+            margin-top: 15px;
+        }
+
+        .chat-input input[type="text"] {
+            flex: 1;
+            padding: 12px;
+            border-radius: 8px;
+            border: none;
+            background-color: #333;
+            color: #fff;
+            outline: none;
+            font-size: 15px;
+        }
+
+        .chat-input input[type="file"] {
+            display: none;
+        }
+
+        .chat-input label {
+            background-color: #00bcd4;
+            color: #000;
+            padding: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+
+        .chat-input button {
+            padding: 12px 20px;
+            background-color: #00bcd4;
+            color: #000;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .chat-input button:hover {
+            background-color: #0097a7;
+        }
+
+        @media (max-width: 900px) {
+            .client-list {
+                display: none;
+            }
+        }
+
+        .client.active {
+            background-color: #0096a7a9 !important;
+            color: #000;
+        }
+
+        </style>
+    </head>
+    <body>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <h2>Titulo Admin</h2>
+        <a href="admin_dashboard.php">Dashboard</a>
+        <a href="admin_client_request.php">Client Requests</a>
+        <a href="admin_client_updates.php">Client Updates</a>
+        <a href="transaction_files.php">Survey Files</a>
+        <a href="admin_chat.php" class="active">Chat</a>
+        <a href="index.php">Logout</a>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main">
+        <!-- Client List -->
+        <div class="client-list">
+            <h3>Clients</h3>
+            <?php foreach ($clients as $client): ?>
+            <div class="client" data-id="<?= $client['id'] ?>" data-name="<?= htmlspecialchars($client['name'], ENT_QUOTES) ?>">
+                <div class="name"><?= htmlspecialchars($client['name']) ?></div>
+                <div class="message-preview">Click to view messages</div>
+            </div>
+            <?php endforeach; ?>
+        </div>
+
+        <!-- Chat Area -->
+        <div class="chat-area">
+            <div class="chat-header" id="chatHeader">Select a client to start chatting</div>
+            <div class="chat-box" id="chatBox">
+            <div style="color:#aaa; text-align:center; margin-top:40px;">Select a client to view messages.</div>
+            </div>
+            <div id="chatInputContainer"></div>
+        </div>
+    </div>
+
+    <script>
+        const shownMessages = new Set();
+        const chatBox = document.getElementById('chatBox');
+        const chatInputContainer = document.getElementById('chatInputContainer');
+        const chatHeader = document.getElementById('chatHeader');
+
+        let selectedClientId = null;
+        let selectedClientName = null; // ✅ store current client's name
+        let lastTimestamp = "0000-00-00 00:00:00";
+        let pollIntervalId = null;
+
+        function renderMessage(msg) {
+            // Date separator
+            const msgDate = new Date(msg.timestamp).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+            if (!renderMessage.lastDate || renderMessage.lastDate !== msgDate) {
+                const dateDiv = document.createElement('div');
+                dateDiv.className = 'date-separator';
+                dateDiv.textContent = msgDate;
+                chatBox.appendChild(dateDiv);
+                renderMessage.lastDate = msgDate;
+            }
+
+            // Message bubble
+            const div = document.createElement('div');
+            const sender = msg.sender || msg.from || 'client';
+            div.className = 'message ' + (sender === 'admin' ? 'admin' : 'client');
+
+            // Message text
+            if (msg.message) {
+                const textDiv = document.createElement('div');
+                textDiv.textContent = msg.message;
+                div.appendChild(textDiv);
+            }
+
+            // File attachment
+            if (msg.file_path) {
+                const fileDiv = document.createElement('div');
+                fileDiv.style.marginTop = '5px';
+                const ext = msg.file_path.split('.').pop().toLowerCase();
+                // If image, show preview
+                if (['jpg','jpeg','png','gif','webp'].includes(ext)) {
+                    const img = document.createElement('img');
+                    img.src = msg.file_path;
+                    img.style.maxWidth = '200px';
+                    img.style.borderRadius = '8px';
+                    fileDiv.appendChild(img);
+                } else {
+                    // Otherwise, provide a download link
+                    const a = document.createElement('a');
+                    a.href = msg.file_path;
+                    a.target = "_blank";
+                    a.textContent = `📎 ${msg.file_path.split('/').pop()}`;
+                    a.style.color = sender === 'admin' ? '#000' : '#fff';
+                    a.style.textDecoration = 'underline';
+                    fileDiv.appendChild(a);
+                }
+                div.appendChild(fileDiv);
+            }
+
+            chatBox.appendChild(div);
+
+            // Timestamp outside
+            if (msg.timestamp) {
+                const t = document.createElement('div');
+                t.className = 'timestamp-outside ' + (sender === 'admin' ? 'admin' : 'client');
+                t.textContent = new Date(msg.timestamp).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+                chatBox.appendChild(t);
+            }
+        }
+        
+
+        async function fetchMessages() {
+            if (!selectedClientId) return;
+            try {
+                const res = await fetch(`get_messages.php?user_id=${encodeURIComponent(selectedClientId)}&lastTimestamp=${encodeURIComponent(lastTimestamp)}`);
+                if (!res.ok) throw new Error('Network error');
+                const messages = await res.json();
+                if (!Array.isArray(messages)) return;
+
+                messages.forEach(msg => {
+                    if (shownMessages.has(msg.id)) return; // prevent duplicates
+                    shownMessages.add(msg.id);
+                    renderMessage(msg);
+                    if (msg.timestamp) lastTimestamp = msg.timestamp;
+                });
+
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        function createChatForm() {
+            chatInputContainer.innerHTML = `
+            <form class="chat-input" id="chatForm" autocomplete="off">
+                <label for="fileInput">📎</label>
+                <input type="file" id="fileInput" name="file" accept="image/*" />
+                <input type="text" id="messageInput" name="message" placeholder="Type your message..." required />
+                <button type="submit">Send</button>
+            </form>
+            `;
+
+            const chatForm = document.getElementById('chatForm');
+            const messageInput = document.getElementById('messageInput');
+            const fileInput = document.getElementById('fileInput');
+
+            chatForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const message = messageInput.value.trim();
+                const file = fileInput.files[0];
+
+                if (!message && !file) return;
+
+                const formData = new FormData();
+                formData.append('message', message);
+                formData.append('sender', 'admin');
+                formData.append('user_id', selectedClientId);
+                if (file) formData.append('file', file);
+
+                try {
+                    const res = await fetch('send_message.php', { method: 'POST', body: formData });
+                    const result = await res.json();
+
+                    if (result && result.success && result.message) {
+                        // ✅ Add the new message ID to prevent duplicate rendering
+                        shownMessages.add(result.message.id);
+                        renderMessage(result.message); // now only render once
+                        messageInput.value = '';
+                        fileInput.value = '';
+                    } else {
+                        alert('Failed to send message');
+                    }
+                } catch {
+                    alert('Network error');
+                }
+            });
+        }
+
+        // ✅ FIX: dynamic client name + proper reset when switching clients
+        document.querySelectorAll('.client').forEach(clientEl => {
+            clientEl.addEventListener('click', async () => {
+                // 🔹 Highlight active client
+                document.querySelectorAll('.client').forEach(el => el.classList.remove('active'));
+                clientEl.classList.add('active');
+
+                // 🔹 Get client info
+                selectedClientId = clientEl.dataset.id;
+                selectedClientName = clientEl.dataset.name; // ✅ store name for dynamic display
+
+                // 🔹 Update header and reset display
+                chatHeader.textContent = `Chat with ${selectedClientName}`;
+                chatBox.innerHTML = '<div style="color:#aaa; text-align:center; margin-top:12px;">Loading messages...</div>';
+
+                // 🔹 Reset chat state for new client
+                shownMessages.clear();
+                lastTimestamp = "0000-00-00 00:00:00";
+
+                // 🔹 Create new chat input form
+                createChatForm();
+
+                // 🔹 Clear chat box and load messages for new client
+                chatBox.innerHTML = '';
+                await fetchMessages();
+
+                // 🔹 Restart polling for the new client
+                if (pollIntervalId) clearInterval(pollIntervalId);
+                pollIntervalId = setInterval(fetchMessages, 3000);
+            });
+        });
+    </script>
+    </body>
 </html>

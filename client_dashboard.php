@@ -145,77 +145,83 @@ $result = $stmt->get_result();
       color: #ccc;
     }
 
+    /* Floating Chat Button */
     .chatbot-btn {
-    position: fixed;
-    bottom: 30px;
-    right: 30px;
-    width: 65px;
-    height: 65px;
-    background: #00ffcc;
-    border-radius: 50%;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    z-index: 2000;
-    transition: box-shadow 0.2s;
-  }
-  .chatbot-btn:hover {
-    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
-  }
-  .chatbot-btn svg {
-    width: 32px;
-    height: 32px;
-    fill: #222;
-  }
-  .chatbot-modal {
-    display: none;
-    position: fixed;
-    bottom: 0;
-    right: 40px;
-    width: 370px;
-    height: 500px;
-    background: #222;
-    border-radius: 18px 18px 0 0;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
-    z-index: 2100;
-    overflow: hidden;
-    flex-direction: column;
-    animation: fadeInUp 0.3s;
-  }
-  .chatbot-modal.active {
-    display: flex;
-  }
-  @keyframes fadeInUp {
-    from { opacity: 0; transform: translateY(40px);}
-    to { opacity: 1; transform: translateY(0);}
-  }
-  .chatbot-btn.hide {
-    display: none;
-  }
-  .chatbot-modal-header {
-    background: #00ffcc;
-    color: #222;
-    padding: 12px 18px;
-    font-weight: bold;
-    font-size: 18px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  .chatbot-close {
-    cursor: pointer;
-    font-size: 22px;
-    font-weight: bold;
-    color: #222;
-  }
-  .chatbot-iframe {
-    border: none;
-    width: 100%;
-    height: 100%;
-    background: #222;
-  }
+      position: fixed;
+      bottom: 25px;
+      right: 30px;
+      width: 65px;
+      height: 65px;
+      background: #00ffcc;
+      border-radius: 50%;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      z-index: 2100;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .chatbot-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 8px 25px rgba(0,0,0,0.4);
+    }
+
+    .chatbot-btn svg {
+      width: 32px;
+      height: 32px;
+      fill: #222;
+    }
+
+    /* Chat Popup Modal */
+    .chatbot-modal {
+      position: fixed;
+      bottom: 100px;
+      right: 40px;
+      width: 370px;
+      height: 480px;
+      background: #fff;
+      border-radius: 18px;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.35);
+      overflow: hidden;
+      z-index: 2050;
+      display: none;
+      flex-direction: column;
+      animation: slideUp 0.3s ease-out;
+    }
+
+    /* Show chat when active */
+    .chatbot-modal.active {
+      display: flex;
+    }
+
+    /* Smooth slide-up animation */
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(40px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* Keep floating button visible */
+    .chatbot-btn.always-visible {
+      display: flex;
+    }
+
+    /* Chat iframe box */
+    .chatbot-iframe {
+      border: none;
+      width: 100%;
+      height: 100%;
+      background: #fff;
+      display: block;
+      border-radius: 18px;
+    }
   </style>
 </head>
 <body>
@@ -353,20 +359,17 @@ $result = $stmt->get_result();
       </div>
 
       <script>
-        
       const chatbotBtn = document.getElementById('chatbotBtn');
       const chatbotModal = document.getElementById('chatbotModal');
 
       chatbotBtn.onclick = function() {
         chatbotModal.classList.add('active');
-        chatbotBtn.classList.add('hide');
       };
 
       // Listen for close message from iframe
       window.addEventListener('message', function(event) {
         if (event.data === 'closeChatbot') {
           chatbotModal.classList.remove('active');
-          chatbotBtn.classList.remove('hide');
         }
       });
     </script>

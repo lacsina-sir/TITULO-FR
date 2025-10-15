@@ -1,18 +1,52 @@
 <?php
-    $conn = new mysqli("localhost", "root", "", "titulo_db");
-    if ($conn->connect_error) {
-        die(json_encode(['success' => false, 'error' => 'DB connection failed']));
-    }
+session_start();
+header('Content-Type: application/json');
 
-    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['message'], $_POST['client_id'])) {
-        $message = trim($_POST['message']);
-        $client_id = intval($_POST['client_id']);
-        $stmt = $conn->prepare("INSERT INTO chat_messages (sender, client_id, message) VALUES ('admin', ?, ?)");
-        $stmt->bind_param("is", $client_id, $message);
-        $stmt->execute();
-        $stmt->close();
-        echo json_encode(['success' => true]);
-        exit;
+$conn = new mysqli("localhost", "root", "", "titulo_db");
+if ($conn->connect_error) {
+    die(json_encode(["success" => false, "error" => "DB connection failed"]));
+}
+
+$user_id = $_POST['user_id'] ?? ($_SESSION['user_id'] ?? 1);
+$sender = $_POST['sender'] ?? 'user';
+$message = trim($_POST['message'] ?? '');
+$file_path = null;
+
+// Handle file upload (optional)
+if (!empty($_FILES['file']['name'])) {
+    $targetDir = "uploads/";
+    if (!is_dir($targetDir)) mkdir($targetDir, 0777, true);
+
+    $fileName = time() . "_" . basename($_FILES["file"]["name"]);
+    $targetFile = $targetDir . $fileName;
+
+    if (move_uploaded_file($_FILES["file"]["tmp_name"], $targetFile)) {
+        $file_path = $targetFile;
     }
-    echo json_encode(['success' => false]);
+}
+
+$stmt = $conn->prepare("INSERT INTO chat_messages (user_id, sender, message, file_path) VALUES (?, ?, ?, ?)");
+$stmt->bind_param("isss", $user_id, $sender, $message, $file_path);
+$success = $stmt->execute();
+
+if ($success) {
+    $newMessageId = $conn->insert_id;
+    $timestamp = date('Y-m-d H:i:s'); // current server timestamp
+    echo json_encode([
+        "success" => true,
+        "message" => [
+            "id" => $newMessageId,
+            "sender" => $sender,
+            "message" => $message,
+            "file_path" => $file_path,
+            "timestamp" => $timestamp,
+            "client_name" => $_SESSION['first_name'] ?? 'Client'
+        ]
+    ]);
+} else {
+    echo json_encode(["success" => false]);
+}
+
+$stmt->close();
+$conn->close();
 ?>
