@@ -1,33 +1,53 @@
 <?php
-// reject.php
 header('Content-Type: application/json');
 
-$host = "localhost";
-$user = "root";
-$pass = "";
-$db   = "titulo_db";
+$conn = new mysqli("localhost", "root", "", "titulo_db");
+if ($conn->connect_error) {
+    echo json_encode(['success' => false, 'error' => 'DB connection failed']);
+    exit;
+}
 
-$conn = new mysqli($host, $user, $pass, $db);
-if ($conn->connect_error) exit(json_encode(['success'=>false,'error'=>'DB connection failed']));
+if (!isset($_POST['id'], $_POST['reason'])) {
+    echo json_encode(['success' => false, 'error' => 'Missing data']);
+    exit;
+}
 
-$id = intval($_POST['id'] ?? 0);
-$reason = trim($_POST['reason'] ?? '');
+$id = intval($_POST['id']);
+$reason = trim($_POST['reason']);
 
-if ($id <= 0 || empty($reason)) exit(json_encode(['success'=>false,'error'=>'Invalid input']));
-
-// Get form details
-$form = $conn->query("SELECT * FROM client_forms WHERE id = $id")->fetch_assoc();
-$details = json_encode($form);
-
-// Insert into rejected_requests
-$stmt = $conn->prepare("INSERT INTO rejected_requests (client_name, type, reason, details, rejected_at) VALUES (?, ?, ?, ?, NOW())");
-$stmt->bind_param("ssss", $form['name'] . ' ' . $form['last_name'], $form['type'], $reason, $details);
+// Get the form
+$stmt = $conn->prepare("SELECT * FROM client_forms WHERE id = ?");
+$stmt->bind_param("i", $id);
 $stmt->execute();
+$result = $stmt->get_result();
+$form = $result->fetch_assoc();
 $stmt->close();
 
-// Update client_forms status
-$conn->query("UPDATE client_forms SET status='Rejected', rejection_reason='".$conn->real_escape_string($reason)."' WHERE id=$id");
+if (!$form) {
+    echo json_encode(['success' => false, 'error' => 'Request not found']);
+    exit;
+}
 
-echo json_encode(['success'=>true]);
+$clientName = $form['name'] . ' ' . $form['last_name'];
+$type = $form['type'];
+$userId = $form['user_id'];
+$now = date('Y-m-d H:i:s');
+
+// Insert into rejected_requests
+$insert = $conn->prepare("
+    INSERT INTO rejected_requests (user_id, client_name, type, reason, rejected_at)
+    VALUES (?, ?, ?, ?, ?)
+");
+$insert->bind_param("issss", $userId, $clientName, $type, $reason, $now);
+$success = $insert->execute();
+$insert->close();
+
+// Update original status
+$update = $conn->prepare("UPDATE client_forms SET status = 'rejected' WHERE id = ?");
+$update->bind_param("i", $id);
+$update->execute();
+$update->close();
+
+echo json_encode(['success' => $success]);
 $conn->close();
 ?>
