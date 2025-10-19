@@ -267,7 +267,9 @@ $result = $stmt->get_result();
       <h2 style="color:#00ffcc;margin-bottom:18px;">Your Submitted Forms</h2>
       <?php if ($result->num_rows > 0): ?>
         <?php while ($row = $result->fetch_assoc()): ?>
+          <a href="client-side_tracking.php?form_id=<?php echo $row['id']; ?>" style="text-decoration:none; color:inherit;">
           <div class="update-card">
+
             <h3><?php echo htmlspecialchars($row['type']); ?> Submitted</h3>
             <p>
               <?php

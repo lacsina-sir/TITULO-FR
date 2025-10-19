@@ -85,12 +85,32 @@ function truncateWords($text, $limit = 20) {
       padding-bottom: 10px;
     }
 
-    .search-bar input {
-      padding: 10px;
-      width: 300px;
-      border-radius: 5px;
-      border: none;
+    .search-container {
+      display: flex;
+      justify-content: flex-start;
       margin-bottom: 20px;
+    }
+
+    #searchUpdates {
+      width: 280px;
+      padding: 10px 14px;
+      border-radius: 25px;
+      border: 1px solid rgba(0, 255, 255, 0.5);
+      background: rgba(255, 255, 255, 0.05);
+      color: #00ffff;
+      font-size: 14px;
+      outline: none;
+      transition: 0.3s;
+    }
+
+    #searchUpdates::placeholder {
+      color: rgba(255, 255, 255, 0.77);
+    }
+
+    #searchUpdates:focus {
+      border-color: #00ffff;
+      box-shadow: 0 0 8px rgba(0, 255, 255, 0.4);
+      background: rgba(0, 0, 0, 0.4);
     }
 
     /* TABLE */
@@ -148,6 +168,15 @@ function truncateWords($text, $limit = 20) {
       background-color: #00ffff;
       color: #000;
       box-shadow: 0 0 8px rgba(0, 255, 255, 0.6);
+    }
+
+    #rejectedSection {
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    #rejectedSection.show {
+      opacity: 1;
     }
 
     /* MODAL */
@@ -354,8 +383,8 @@ function truncateWords($text, $limit = 20) {
 
   <div class="container">
     <h1>Client Updates</h1>
-    <div class="search-bar">
-      <input type="text" id="search" placeholder="Search pending updates...">
+    <div class="search-container">
+      <input type="text" id="searchUpdates" placeholder="Search Updates...">
     </div>
 
     <?php if ($result && $result->num_rows > 0): ?>
@@ -438,31 +467,58 @@ function truncateWords($text, $limit = 20) {
       <button id="toggleRejectedBtn">Show Rejected Requests</button>
     </div>
 
-    <div id="rejectedSection" class="container-one" style="display:none;">
+    <div id="rejectedSection" style="display:none;">
       <h2>Rejected Requests</h2>
-      <?php if ($rejected_result && $rejected_result->num_rows > 0): ?>
+
+      <?php
+      if ($rejected_result && $rejected_result->num_rows > 0): ?>
         <table>
           <thead>
             <tr>
               <th>Client Name</th>
               <th>Type</th>
+              <th>Files</th>
               <th>Reason</th>
               <th>Rejected At</th>
             </tr>
           </thead>
           <tbody>
-            <?php while ($r = $rejected_result->fetch_assoc()): ?>
-            <tr>
-              <td><?= htmlspecialchars($r['client_name']) ?></td>
-              <td><?= htmlspecialchars($r['type']) ?></td>
-              <td><?= htmlspecialchars($r['reason']) ?></td>
-              <td><?= date('F j, Y, g:i a', strtotime($r['rejected_at'])) ?></td>
-            </tr>
+            <?php while ($row = $rejected_result->fetch_assoc()): ?>
+              <tr>
+                <td><?= htmlspecialchars($row['client_name']); ?></td>
+                <td><?= htmlspecialchars($row['type']); ?></td>
+                <td>
+                  <?php 
+                    $files = [];
+                    if (!empty($row['file_paths'])) {
+                        $files = json_decode($row['file_paths'], true);
+                        if (!is_array($files)) {
+                            $files = explode(',', $row['file_paths']);
+                        }
+                    }
+
+                    if (!empty($files)):
+                        foreach ($files as $file):
+                            $file = trim($file);
+                            if ($file):
+                  ?>
+                    <a href="<?= htmlspecialchars($file) ?>" target="_blank" style="color: #00ffcc; text-decoration: none;">View File</a><br>
+                  <?php 
+                            endif;
+                        endforeach;
+                    else: 
+                  ?>
+                    <em>No files</em>
+                  <?php endif; ?>
+                </td>
+                <td><?= htmlspecialchars($row['reason']); ?></td>
+                <td><?= date('F j, Y, g:i a', strtotime($row['rejected_at'])); ?></td>
+              </tr>
             <?php endwhile; ?>
           </tbody>
         </table>
       <?php else: ?>
-        <p>No rejected requests found.</p>
+      <p style="color:#00ffff; font-style:italic; margin-top:10px;">No rejected updates found.</p>
       <?php endif; ?>
     </div>
   </div>
@@ -550,227 +606,248 @@ function truncateWords($text, $limit = 20) {
   </div>
 
   <script>
-  const modal = document.getElementById("editModal");
-  const editForm = document.getElementById("editForm");
-  const adminBody = document.getElementById("adminUpdatesBody");
+  document.addEventListener('DOMContentLoaded', function () {
+    const modal = document.getElementById("editModal");
+    const editForm = document.getElementById("editForm");
+    const adminBody = document.getElementById("adminUpdatesBody");
+    const toggleBtn = document.getElementById("toggleRejectedBtn");
+    const rejectedSection = document.getElementById("rejectedSection");
+    const searchInput = document.getElementById("searchUpdates");
+    const updatesTable = document.getElementById("updatesTable");
 
-  function truncateText(text, limit = 20) {
-    const words = text.trim().split(/\s+/);
-    return words.length > limit ? words.slice(0, limit).join(' ') + ' ...' : text;
-  }
-  
-  function dateToReadable(dateStr) {
-    if (!dateStr || dateStr === "—" || dateStr === "0000-00-00") return "—";
-
-    const date = new Date(dateStr);
-    if (isNaN(date.getTime())) return "—";
-
-    const mm = String(date.getMonth() + 1).padStart(2, '0');
-    const dd = String(date.getDate()).padStart(2, '0');
-    const yyyy = date.getFullYear();
-
-    return `${mm}/${dd}/${yyyy}`;
-  }
-
-  document.getElementById("search").addEventListener("input", function () {
-    const query = this.value.toLowerCase().trim();
-    const rows = document.querySelectorAll("#updatesTable tbody tr");
-
-    rows.forEach(row => {
-      const name = row.dataset.name?.toLowerCase() || '';
-      const type = row.dataset.type?.toLowerCase() || '';
-      const match = name.includes(query) || type.includes(query);
-      row.style.display = match ? "" : "none";
-    });
-  });
-
-  document.querySelectorAll("#updatesTable td[data-full]").forEach(td => {
-    td.title = td.getAttribute("data-full");
-  });
-
-  document.querySelectorAll("#updatesTable tbody tr").forEach(row => {
-    row.addEventListener("click", () => {
-      const id = row.dataset.id;
-      const data = JSON.parse(row.dataset.details);
-      const saved = localStorage.getItem("updates_" + id);
-
-      document.getElementById("editId").value = id;
-      document.getElementById("editDateProcessed").value = 
-          data.date_processed && data.date_processed !== "0000-00-00" ? data.date_processed : '';
-      document.getElementById("editClientName").value = [data.name, data.last_name].filter(Boolean).join(" ");
-      document.getElementById("editArea").value = data.ls_area || '';
-      document.getElementById("editLot").value = data.ls_lot || '';
-      document.getElementById("editLocation").value = data.ls_location || '';
-      document.getElementById("editType").value = data.type || '';
-      document.getElementById("editSurveyPlanHidden").value = data.surveyplan || '';
-      document.getElementById("editDescriptionHidden").value = data.description || '';
-      document.getElementById("editStatus").value = row.cells[6].getAttribute('data-full');
-
-      // 🧠 Load saved table from localStorage (if exists)
-      adminBody.innerHTML = saved || ""; // restore old rows
-
-      modal.style.display = "flex";
-    });
-  });
-
-  function closeModal() {
-    modal.style.display = "none";
-  }
-
-  // Add new remark row
-  document.querySelector(".addRowBtn").addEventListener("click", () => {
-    const status = document.getElementById("newStatus").value.trim();
-    const remarks = document.getElementById("newRemarks").value.trim();
-    const expenses = document.getElementById("newExpenses").value.trim();
-    const currentId = document.getElementById("editId").value;
-
-    if (!status && !remarks && !expenses) return;
-
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${new Date().toLocaleString()}</td>
-      <td>${status || "—"}</td>
-      <td>${remarks || "—"}</td>
-      <td>${expenses || "—"}</td>
-    `;
-    adminBody.appendChild(tr);
-
-    if (status) {
-      document.getElementById("editStatus").value = status;
+    function truncateText(text, limit = 20) {
+      const words = String(text || '').trim().split(/\s+/);
+      return words.length > limit ? words.slice(0, limit).join(' ') + ' ...' : text || '';
     }
 
-    // Save updates locally per client
-    localStorage.setItem("updates_" + currentId, adminBody.innerHTML);
+    function dateToReadable(dateStr) {
+      if (!dateStr || dateStr === "—" || dateStr === "0000-00-00") return "—";
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) return "—";
+      const mm = String(date.getMonth() + 1).padStart(2, '0');
+      const dd = String(date.getDate()).padStart(2, '0');
+      const yyyy = date.getFullYear();
+      return `${mm}/${dd}/${yyyy}`;
+    }
 
-    document.getElementById("newStatus").value = '';
-    document.getElementById("newRemarks").value = '';
-    document.getElementById("newExpenses").value = '';
-  });
-
-  function showNotification(message, type = "success") {
-    // Remove any existing notification first
-    const oldNotif = document.getElementById("notification-bar");
-    if (oldNotif) oldNotif.remove();
-
-    const notif = document.createElement("div");
-    notif.id = "notification-bar";
-    notif.textContent = message;
-
-    // Basic styling
-    notif.style.position = "fixed";
-    notif.style.top = "-60px";
-    notif.style.left = "50%";
-    notif.style.transform = "translateX(-50%)";
-    notif.style.background = type === "success" ? "#00b894" : "#d63031"; // blue-green or red
-    notif.style.color = "#fff";
-    notif.style.padding = "14px 30px";
-    notif.style.borderRadius = "8px";
-    notif.style.boxShadow = "0 2px 10px rgba(0,0,0,0.2)";
-    notif.style.fontSize = "16px";
-    notif.style.fontWeight = "500";
-    notif.style.transition = "top 0.5s ease, opacity 0.5s ease";
-    notif.style.opacity = "0.95";
-    notif.style.zIndex = "9999";
-    document.body.appendChild(notif);
-
-    // Slide down animation
-    setTimeout(() => { notif.style.top = "20px"; }, 50);
-
-    // Auto hide
-    setTimeout(() => {
-      notif.style.top = "-60px";
-      notif.style.opacity = "0";
-      setTimeout(() => notif.remove(), 500);
-    }, 3000);
-  }
-
-  // Save button
-  editForm.addEventListener("submit", e => {
-    e.preventDefault();
-    const formData = new FormData(editForm);
-    formData.append("updates", JSON.stringify([...adminBody.querySelectorAll("tr")].map(tr => ({
-      date: tr.cells[0].textContent,
-      status: tr.cells[1].textContent,
-      remarks: tr.cells[2].textContent,
-      expenses: tr.cells[3].textContent
-    }))));
-
-    fetch("update_pending_status.php", {
-      method: "POST",
-      body: formData
-    })
-    .then(res => {
-      if (!res.ok) throw new Error("Network response was not ok");
-      return res.json();
-    })
-    .then(data => {
-      if (data.success) {
-        // ✅ Update the table row
-        const row = document.querySelector(`tr[data-id='${formData.get("id")}']`);
-        const fullStatus = data.updated_status || document.getElementById("editStatus").value;
-
-        row.cells[0].textContent = data.updated_name;
-        row.cells[1].textContent = formData.get("type");
-        row.cells[4].textContent = dateToReadable(data.updated_date_processed);
-        row.cells[5].textContent = dateToReadable(data.last_updated) || "—";
-        row.cells[6].textContent = truncateText(fullStatus, 20);
-        row.cells[6].setAttribute('data-full', fullStatus);
-        row.cells[6].title = fullStatus;
-
-        // ✅ Update dataset
-        const oldData = JSON.parse(document.querySelector(`tr[data-id='${formData.get("id")}']`).dataset.details || "{}");
-        const updatedDetails = {
-          name: formData.get("client_name"),
-          ls_area: formData.get("area"),
-          ls_lot: formData.get("lot"),
-          ls_location: formData.get("location"),
-          type: formData.get("type"),
-          surveyplan: formData.get("surveyplan"),
-          description: formData.get("description"),
-          date_processed: formData.get("date_processed"),
-          file_paths: oldData.file_paths || [] // 🟢 Keep existing files!
-        };
-
-        row.dataset.details = JSON.stringify(updatedDetails);
-
-        showNotification("Saved successfully!", "success");
-        closeModal();
-      } else {
-        showNotification("Failed to save. Please try again.", "error");
-      }
-    })
-    .catch(err => {
-      console.error("Fetch error:", err);
-      showNotification("Something went wrong. Check console.", "error");
-    });
-  });
-
-  fetch(`get_admin_updates.php?id=${id}`)
-  .then(res => res.json())
-  .then(dbData => {
-    if (dbData.success && Array.isArray(dbData.updates)) {
-      adminBody.innerHTML = "";
-      dbData.updates.forEach(update => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td>${update.date}</td>
-          <td>${update.status}</td>
-          <td>${update.remarks}</td>
-          <td>${update.expenses}</td>
-        `;
-        adminBody.appendChild(tr);
+    // Live search
+    if (searchInput) {
+      searchInput.addEventListener('input', function () {
+        const query = this.value.toLowerCase().trim();
+        const rows = document.querySelectorAll('#updatesTable tbody tr');
+        rows.forEach(row => {
+          const cells = Array.from(row.querySelectorAll('td'));
+          const rowText = cells.map(td => td.textContent.toLowerCase()).join(' ');
+          row.style.display = rowText.includes(query) ? '' : 'none';
+        });
       });
     }
-  });
 
-  document.getElementById("toggleRejectedBtn").addEventListener("click", function(){
-    const section = document.getElementById("rejectedSection");
-    if (section.style.display === "none") {
-      section.style.display = "block";
-      this.textContent = "Hide Rejected Requests";
+    // Set title for long status cells
+    document.querySelectorAll('#updatesTable td[data-full]').forEach(td => {
+      td.title = td.getAttribute('data-full');
+    });
+
+    // Prevent link clicks from opening modal
+    document.querySelectorAll('#updatesTable tbody tr a').forEach(a => {
+      a.addEventListener('click', e => e.stopPropagation());
+    });
+
+    // Row click: open modal and load admin updates for that request
+    if (updatesTable) {
+      updatesTable.querySelectorAll('tbody tr').forEach(row => {
+        row.addEventListener('click', () => {
+          const id = row.dataset.id;
+          const data = (() => { try { return JSON.parse(row.dataset.details || '{}'); } catch (e) { return {}; } })();
+
+          document.getElementById('editId').value = id || '';
+          document.getElementById('editDateProcessed').value = data.date_processed && data.date_processed !== '0000-00-00' ? data.date_processed : '';
+          document.getElementById('editClientName').value = [data.name, data.last_name].filter(Boolean).join(' ');
+          document.getElementById('editArea').value = data.ls_area || '';
+          document.getElementById('editLot').value = data.ls_lot || '';
+          document.getElementById('editLocation').value = data.ls_location || '';
+          document.getElementById('editType').value = data.type || '';
+          document.getElementById('editSurveyPlanHidden').value = data.surveyplan || '';
+          document.getElementById('editDescriptionHidden').value = data.description || '';
+          document.getElementById('editStatus').value = row.cells[6] ? row.cells[6].getAttribute('data-full') : '';
+
+          // Load admin updates from server for this id
+          loadAdminUpdates(id);
+
+          // Restore any locally saved rows
+          const saved = localStorage.getItem('updates_' + id);
+          adminBody.innerHTML = saved || '';
+
+          modal.style.display = 'flex';
+        });
+      });
+    }
+
+    function loadAdminUpdates(id) {
+      if (!id) {
+        adminBody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#ccc">No updates</td></tr>';
+        return;
+      }
+      adminBody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#ccc">Loading...</td></tr>';
+      fetch('get_admin_updates.php?id=' + encodeURIComponent(id))
+        .then(res => res.json())
+        .then(dbData => {
+          adminBody.innerHTML = '';
+          if (dbData && dbData.success && Array.isArray(dbData.updates) && dbData.updates.length) {
+            dbData.updates.forEach(update => {
+              const tr = document.createElement('tr');
+              tr.innerHTML = `
+                <td>${update.date}</td>
+                <td>${update.status}</td>
+                <td>${update.remarks}</td>
+                <td>${update.expenses}</td>
+              `;
+              adminBody.appendChild(tr);
+            });
+          } else {
+            adminBody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#ccc">No updates</td></tr>';
+          }
+        })
+        .catch(err => {
+          console.error('loadAdminUpdates error', err);
+          adminBody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#f88">Failed to load</td></tr>';
+        });
+    }
+
+  function closeModal() { if (modal) modal.style.display = 'none'; }
+  // expose to global so inline onclick handlers work (Cancel button)
+  window.closeModal = closeModal;
+
+    // Add new remark row (guard existence)
+    const addRowBtn = document.querySelector('.addRowBtn');
+    if (addRowBtn) {
+      addRowBtn.addEventListener('click', () => {
+        const newStatusEl = document.getElementById('newStatus');
+        const newRemarksEl = document.getElementById('newRemarks');
+        const newExpensesEl = document.getElementById('newExpenses');
+        const editIdEl = document.getElementById('editId');
+        const status = newStatusEl ? newStatusEl.value.trim() : '';
+        const remarks = newRemarksEl ? newRemarksEl.value.trim() : '';
+        const expenses = newExpensesEl ? newExpensesEl.value.trim() : '';
+        const currentId = editIdEl ? editIdEl.value : '';
+        if (!status && !remarks && !expenses) return;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${new Date().toLocaleString()}</td>
+          <td>${status || '—'}</td>
+          <td>${remarks || '—'}</td>
+          <td>${expenses || '—'}</td>
+        `;
+        if (adminBody) {
+          adminBody.querySelectorAll('tr').forEach(r => {
+            const td = r.querySelector('td[colspan]');
+            if (td) {
+              const txt = (td.textContent || '').toLowerCase();
+              if (txt.includes('no updates') || txt.includes('loading')) r.remove();
+            }
+          });
+          adminBody.appendChild(tr);
+        }
+        if (status && document.getElementById('editStatus')) document.getElementById('editStatus').value = status;
+        try { localStorage.setItem('updates_' + currentId, adminBody ? adminBody.innerHTML : ''); } catch (e) { /* ignore storage errors */ }
+        if (newStatusEl) newStatusEl.value = '';
+        if (newRemarksEl) newRemarksEl.value = '';
+        if (newExpensesEl) newExpensesEl.value = '';
+      });
+    }
+
+    function showNotification(message, type = 'success') {
+      const old = document.getElementById('notification-bar'); if (old) old.remove();
+      const n = document.createElement('div'); n.id = 'notification-bar'; n.textContent = message;
+      n.style.position = 'fixed'; n.style.top = '-60px'; n.style.left = '50%'; n.style.transform = 'translateX(-50%)';
+      n.style.background = type === 'success' ? '#00b894' : '#d63031'; n.style.color = '#fff';
+      n.style.padding = '14px 30px'; n.style.borderRadius = '8px'; n.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
+      n.style.fontSize = '16px'; n.style.fontWeight = '500'; n.style.transition = 'top 0.5s ease, opacity 0.5s ease'; n.style.opacity = '0.95'; n.style.zIndex = '9999';
+      document.body.appendChild(n);
+      setTimeout(() => { n.style.top = '20px'; }, 50);
+      setTimeout(() => { n.style.top = '-60px'; n.style.opacity = '0'; setTimeout(() => n.remove(), 500); }, 3000);
+    }
+
+    // Save button (guard existence)
+    if (editForm) {
+      editForm.addEventListener('submit', e => {
+        e.preventDefault();
+        const formData = new FormData(editForm);
+        const id = document.getElementById('editId') ? document.getElementById('editId').value : '';
+        const rows = adminBody ? [...adminBody.querySelectorAll('tr')] : [];
+        formData.append('updates', JSON.stringify(rows.map(tr => ({
+          date: tr.cells[0] ? tr.cells[0].textContent : '',
+          status: tr.cells[1] ? tr.cells[1].textContent : '',
+          remarks: tr.cells[2] ? tr.cells[2].textContent : '',
+          expenses: tr.cells[3] ? tr.cells[3].textContent : ''
+        }))));
+        // ensure id is present
+        formData.append('id', id);
+        fetch('update_pending_status.php', { method: 'POST', body: formData })
+          .then(res => res.text().then(text => ({ ok: res.ok, status: res.status, text })))
+          .then(({ ok, status, text }) => {
+            let data;
+            try {
+              data = JSON.parse(text || '{}');
+            } catch (parseErr) {
+              console.error('update_pending_status returned non-JSON:', text);
+              showNotification('Server error: see console for details.', 'error');
+              return;
+            }
+            if (data.success) {
+              const row = document.querySelector(`tr[data-id='${id}']`);
+              const fullStatus = data.updated_status || (document.getElementById('editStatus') ? document.getElementById('editStatus').value : '');
+              if (row) {
+                row.cells[0].textContent = data.updated_name || row.cells[0].textContent;
+                row.cells[1].textContent = formData.get('type') || row.cells[1].textContent;
+                row.cells[4].textContent = dateToReadable(data.updated_date_processed) || row.cells[4].textContent;
+                row.cells[5].textContent = dateToReadable(data.last_updated) || row.cells[5].textContent;
+                row.cells[6].textContent = truncateText(fullStatus, 20);
+                row.cells[6].setAttribute('data-full', fullStatus);
+                row.cells[6].title = fullStatus;
+                const oldData = JSON.parse(row.dataset.details || '{}');
+                const updatedDetails = Object.assign({}, oldData, {
+                  name: formData.get('client_name') || oldData.name,
+                  ls_area: formData.get('area') || oldData.ls_area,
+                  ls_lot: formData.get('lot') || oldData.ls_lot,
+                  ls_location: formData.get('location') || oldData.ls_location,
+                  type: formData.get('type') || oldData.type,
+                  surveyplan: formData.get('surveyplan') || oldData.surveyplan,
+                  description: formData.get('description') || oldData.description,
+                  date_processed: formData.get('date_processed') || oldData.date_processed
+                });
+                row.dataset.details = JSON.stringify(updatedDetails);
+              }
+              try { localStorage.removeItem('updates_' + id); } catch (e) { /* ignore storage errors */ }
+              showNotification('Saved successfully!', 'success');
+              closeModal();
+            } else {
+              console.error('update_pending_status response:', data);
+              const msg = data && data.error ? data.error : 'Failed to save. Please try again.';
+              showNotification(msg, 'error');
+            }
+          })
+          .catch(err => { console.error('Fetch error:', err); showNotification('Network error: check console.', 'error'); });
+      });
     } else {
-      section.style.display = "none";
-      this.textContent = "Show Rejected Requests";
+      console.warn('editForm not found on this page; save handler not attached.');
+    }
+
+    // Toggle rejected section
+    if (toggleBtn && rejectedSection) {
+      toggleBtn.addEventListener('click', function () {
+        const isHidden = rejectedSection.style.display === 'none' || rejectedSection.style.display === '';
+        rejectedSection.style.display = isHidden ? 'block' : 'none';
+        rejectedSection.classList.toggle('show', isHidden);
+        this.textContent = isHidden ? 'Hide Rejected Requests' : 'Show Rejected Requests';
+      });
+    }
+
+    // Close controls
+    document.getElementById('closeUpdateModal') && document.getElementById('closeUpdateModal').addEventListener('click', closeModal);
+    // also add simple click outside modal to close (guard modal)
+    if (modal) {
+      modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
     }
   });
   </script>

@@ -28,18 +28,17 @@ if (!$form) {
     exit;
 }
 
-// Prepare data
 $clientName = $form['name'] . ' ' . $form['last_name'];
 $status = 'Approved';
 $now = date('Y-m-d H:i:s');
 $details = json_encode($form);
 
-// Insert into pending_updates
-$insert = $conn->prepare("
+// ✅ Insert into pending_updates
+$insertPending = $conn->prepare("
     INSERT INTO pending_updates (user_id, client_name, request_type, transaction_number, status, last_updated, details)
     VALUES (?, ?, ?, ?, ?, ?, ?)
 ");
-$insert->bind_param(
+$insertPending->bind_param(
     "issssss",
     $form['user_id'],
     $clientName,
@@ -49,10 +48,32 @@ $insert->bind_param(
     $now,
     $details
 );
-$success = $insert->execute();
-$insert->close();
+$success = $insertPending->execute();
+$insertPending->close();
 
-// Update original form status
+// Log into progress tracker
+$insert2 = $conn->prepare("
+    INSERT INTO progress_tracker (client_id, status, reason, updated_at)
+    VALUES (?, 'rejected', ?, NOW())
+");
+$insert2->bind_param("is", $id, $reason);
+$insert2->execute();
+$insert2->close();
+
+
+// ✅ Log in progress tracker
+// ✅ Log in progress_tracker with consistent status text
+$pt = $conn->prepare("INSERT INTO progress_tracker (client_id, status, remarks, expenses, updated_at) VALUES (?, ?, ?, ?, NOW())");
+if ($pt) {
+    $stat = 'Approved';
+    $remarks = 'Approved by admin';
+    $expenses = '';
+    $pt->bind_param("isss", $id, $stat, $remarks, $expenses);
+    $pt->execute();
+    $pt->close();
+}
+
+// ✅ Update original form status
 $update = $conn->prepare("UPDATE client_forms SET status = 'approved' WHERE id = ?");
 $update->bind_param("i", $id);
 $update->execute();
