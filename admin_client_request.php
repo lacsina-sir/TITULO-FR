@@ -215,7 +215,7 @@ if ($form) {
     <div class="sidebar">
         <h2>Titulo Admin</h2>
         <a href="admin_dashboard.php">Dashboard</a>
-        <a href="admin_client_requests.php" class="active">Client Requests</a>
+        <a href="admin_client_request.php" class="active">Client Requests</a>
         <a href="admin_client_updates.php">Client Updates</a>
         <a href="transaction_files.php">Survey Files</a>
         <a href="admin_chat.php">Chat</a>

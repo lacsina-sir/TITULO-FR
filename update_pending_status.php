@@ -1,10 +1,10 @@
 <?php
 header('Content-Type: application/json; charset=utf-8');
-// suppress PHP warnings from being output (they would break JSON parsing on client)
 ini_set('display_errors', '0');
 error_reporting(0);
-// clear output buffer if one exists
 if (ob_get_level()) ob_clean();
+
+date_default_timezone_set('Asia/Manila');
 
 $host = "localhost";
 $user = "root";
@@ -29,6 +29,7 @@ $status = $_POST['status'] ?? '';
 $date_processed = $_POST['date_processed'] ?? '';
 $updates = $_POST['updates'] ?? '';
 $updates = isset($_POST['updates']) ? $_POST['updates'] : '[]';
+$purpose = $_POST['purpose'] ?? '';
 
 if (empty($id)) {
     echo json_encode(["success" => false, "error" => "Missing ID"]);
@@ -36,7 +37,6 @@ if (empty($id)) {
 }
 
 // ✅ Get current details to preserve file_paths
-// Fetch pending_updates row (use prepared statement)
 $stmt = $conn->prepare("SELECT id, user_id, details, admin_updates FROM pending_updates WHERE id = ?");
 if (!$stmt) {
     echo json_encode(["success" => false, "error" => "DB prepare failed: " . $conn->error]);
@@ -58,9 +58,7 @@ $oldRow = $result->fetch_assoc();
 $stmt->close();
 
 $detailsArr = json_decode($oldRow['details'] ?? '{}', true) ?: [];
-// Determine the underlying client form id if present in details (client_forms.id)
 $client_form_id = $detailsArr['id'] ?? $detailsArr['form_id'] ?? null;
-// If not available, fallback to pending_updates.user_id (this is the client's user id)
 $client_user_id = $oldRow['user_id'] ?? null;
 
 // ✅ Update all fields except file_paths
@@ -72,12 +70,11 @@ $detailsArr['type'] = $type;
 $detailsArr['surveyplan'] = $surveyplan;
 $detailsArr['description'] = $description;
 $detailsArr['date_processed'] = $date_processed;
+$detailsArr['purpose'] = $purpose ?: ($detailsArr['purpose'] ?? '');
 
 $details = json_encode($detailsArr, JSON_UNESCAPED_UNICODE);
 
 // ✅ Save details, status, and admin updates permanently
-// Update pending_updates with new details and admin_updates payload
-// prepare update statement
 $stmt = $conn->prepare("UPDATE pending_updates SET details=?, status=?, admin_updates=?, last_updated=NOW() WHERE id=?");
 if (!$stmt) {
     echo json_encode(["success" => false, "error" => "DB prepare failed (update): " . $conn->error]);
@@ -92,36 +89,88 @@ if ($success === false) {
 }
 $stmt->close();
 
-// Save tracking records for client (use progress_tracker table)
+if (!empty($client_form_id)) {
+    $updFields = [];
+    $params = [];
+    $types = '';
+    if ($area !== '') { $updFields[] = 'ls_area = ?'; $params[] = $area; $types .= 's'; }
+    if ($lot !== '') { $updFields[] = 'ls_lot = ?'; $params[] = $lot; $types .= 's'; }
+    if ($location !== '') { $updFields[] = 'ls_location = ?'; $params[] = $location; $types .= 's'; }
+    if ($purpose !== '') { $updFields[] = 'purpose = ?'; $params[] = $purpose; $types .= 's'; }
+    if (!empty($updFields)) {
+        $types .= 'i';
+        $params[] = $client_form_id;
+        $sql = "UPDATE client_forms SET " . implode(', ', $updFields) . " WHERE id = ?";
+        $ustmt = $conn->prepare($sql);
+        if ($ustmt) {
+            // bind params dynamically
+            $bindNames = array_merge([$types], $params);
+            $tmp = [];
+            foreach ($bindNames as $k => $v) $tmp[$k] = &$bindNames[$k];
+            call_user_func_array([$ustmt, 'bind_param'], $tmp);
+            $ustmt->execute();
+            $ustmt->close();
+        }
+    }
+}
+
+// Save tracking records for client
 $updatesArr = [];
 if (!empty($updates)) {
     $updatesArr = json_decode($updates, true);
     if (!is_array($updatesArr)) $updatesArr = [];
 }
 
-// If there are admin updates (array of rows), insert them individually into progress_tracker
 if (!empty($updatesArr) && is_array($updatesArr)) {
     $insertTrack = $conn->prepare("INSERT INTO progress_tracker (client_id, status, remarks, expenses, updated_at) VALUES (?, ?, ?, ?, ?)");
     if (!$insertTrack) {
         echo json_encode(["success" => false, "error" => "DB prepare failed (insertTrack): " . $conn->error]);
         exit;
     }
+    $trackClientId = $client_form_id ?? $client_user_id ?? 0;
+    $lastStatusRow = null;
+    $lastTrackStmt = $conn->prepare("SELECT status, remarks, expenses FROM progress_tracker WHERE client_id = ? ORDER BY updated_at DESC LIMIT 1");
+    if ($lastTrackStmt) {
+        $lastTrackStmt->bind_param("i", $trackClientId);
+        if ($lastTrackStmt->execute()) {
+            $lr = $lastTrackStmt->get_result();
+            if ($lr && $lr->num_rows) $lastStatusRow = $lr->fetch_assoc();
+        }
+        $lastTrackStmt->close();
+    }
     foreach ($updatesArr as $u) {
-        $uDate = $u['date'] ?? date('Y-m-d H:i:s');
-        $uStatus = $u['status'] ?? $status;
-        $uRemarks = $u['remarks'] ?? '';
-        $uExpenses = $u['expenses'] ?? '';
-        // Use client_form_id if available, otherwise try client_user_id
-        $trackClientId = $client_form_id ?? $client_user_id ?? 0;
+        $uDate = date('Y-m-d H:i:s');
+        $uStatus = isset($u['status']) ? trim((string)$u['status']) : '';
+        $uRemarks = isset($u['remarks']) ? trim((string)$u['remarks']) : '';
+        $uExpenses = isset($u['expenses']) ? trim((string)$u['expenses']) : '';
+
+        $trackClientId = intval($trackClientId);
+
+        $isDuplicate = false;
+        $dupStmt = $conn->prepare("SELECT id FROM progress_tracker WHERE client_id = ? AND TRIM(COALESCE(status,'')) = ? AND TRIM(COALESCE(remarks,'')) = ? AND TRIM(COALESCE(expenses,'')) = ? ORDER BY updated_at DESC LIMIT 1");
+        if ($dupStmt) {
+            $dupStmt->bind_param("isss", $trackClientId, $uStatus, $uRemarks, $uExpenses);
+            if ($dupStmt->execute()) {
+                $dr = $dupStmt->get_result();
+                if ($dr && $dr->num_rows) {
+                    $isDuplicate = true;
+                }
+            }
+            $dupStmt->close();
+        }
+
+        if ($isDuplicate) {
+            continue;
+        }
         $insertTrack->bind_param("issss", $trackClientId, $uStatus, $uRemarks, $uExpenses, $uDate);
         if (!$insertTrack->execute()) {
-            // non-fatal: continue but record the error to return later
             $lastInsertError = $insertTrack->error;
+        } else {
+            $lastStatusRow = ['status' => $uStatus, 'remarks' => $uRemarks, 'expenses' => $uExpenses];
         }
     }
     $insertTrack->close();
 } else {
-    // If no admin updates array, still insert one progress_tracker row to record the status change
     $insertTrack = $conn->prepare("INSERT INTO progress_tracker (client_id, status, remarks, expenses, updated_at) VALUES (?, ?, ?, ?, ?)");
     if (!$insertTrack) {
         echo json_encode(["success" => false, "error" => "DB prepare failed (insertTrack single): " . $conn->error]);
@@ -129,9 +178,41 @@ if (!empty($updatesArr) && is_array($updatesArr)) {
     }
     $uDate = date('Y-m-d H:i:s');
     $trackClientId = $client_form_id ?? $client_user_id ?? 0;
-    $insertTrack->bind_param("issss", $trackClientId, $status, '', '', $uDate);
-    if (!$insertTrack->execute()) {
-        $lastInsertError = $insertTrack->error;
+    $shouldInsert = true;
+    $checkLast = $conn->prepare("SELECT status, remarks, expenses FROM progress_tracker WHERE client_id = ? ORDER BY updated_at DESC LIMIT 1");
+    if ($checkLast) {
+        $checkLast->bind_param("i", $trackClientId);
+        if ($checkLast->execute()) {
+            $lr = $checkLast->get_result();
+            if ($lr && $lr->num_rows) {
+                $lastRow = $lr->fetch_assoc();
+                $lastS = trim((string)$lastRow['status']);
+                $lastR = trim((string)$lastRow['remarks']);
+                $lastE = trim((string)$lastRow['expenses']);
+                if (strcasecmp($lastS, trim((string)$status)) === 0 && $lastR === '' && $lastE === '') {
+                    $shouldInsert = false;
+                }
+            }
+        }
+        $checkLast->close();
+    }
+    if ($shouldInsert) {
+        $dupStmt2 = $conn->prepare("SELECT id FROM progress_tracker WHERE client_id = ? AND TRIM(COALESCE(status,'')) = ? AND TRIM(COALESCE(remarks,'')) = ? AND TRIM(COALESCE(expenses,'')) = ? ORDER BY updated_at DESC LIMIT 1");
+        $skip = false;
+        if ($dupStmt2) {
+            $dupStmt2->bind_param("isss", $trackClientId, $status, '', '');
+            if ($dupStmt2->execute()) {
+                $dr2 = $dupStmt2->get_result();
+                if ($dr2 && $dr2->num_rows) $skip = true;
+            }
+            $dupStmt2->close();
+        }
+        if (!$skip) {
+        $insertTrack->bind_param("issss", $trackClientId, $status, '', '', $uDate);
+        if (!$insertTrack->execute()) {
+            $lastInsertError = $insertTrack->error;
+        }
+        }
     }
     $insertTrack->close();
 }
@@ -144,7 +225,9 @@ echo json_encode([
     "updated_name" => $client_name,
     "updated_status" => $status,
     "updated_date_processed" => $formatted_date,
-    "last_updated" => date('F j, Y, g:i a')
+    "last_updated" => date('Y-m-d H:i:s'),
+    "updated_purpose" => $detailsArr['purpose'] ?? '',
+    "updated_area" => $detailsArr['ls_area'] ?? ''
 ], JSON_UNESCAPED_UNICODE);
 
 $conn->close();

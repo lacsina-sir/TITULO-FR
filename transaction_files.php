@@ -19,7 +19,22 @@ if (isset($_GET['delete'])) {
 }
 
 // Fetch survey files
-$result = $conn->query("SELECT * FROM survey_files ORDER BY date_submitted DESC");
+$search = "";
+if (isset($_GET['search'])) {
+    $search = trim($_GET['search']);
+    $search = $conn->real_escape_string($search);
+    $query = "
+        SELECT * FROM survey_files 
+        WHERE client_name LIKE '%$search%' 
+          OR location LIKE '%$search%'
+          OR survey_type LIKE '%$search%'
+        ORDER BY date_submitted DESC
+    ";
+} else {
+    $query = "SELECT * FROM survey_files ORDER BY date_submitted DESC";
+}
+
+$result = $conn->query($query);
 ?>
 
 <!DOCTYPE html>
@@ -99,11 +114,33 @@ $result = $conn->query("SELECT * FROM survey_files ORDER BY date_submitted DESC"
       margin: 0;
     }
 
-    .search-box input {
-      padding: 10px;
-      width: 220px;
-      border-radius: 5px;
-      border: none;
+    #searchBar {
+      width: 280px;
+      padding: 10px 14px;
+      border-radius: 25px;
+      border: 1px solid rgba(0, 255, 255, 0.5);
+      background: rgba(255, 255, 255, 0.05);
+      color: #00ffff;
+      font-size: 14px;
+      outline: none;
+      transition: 0.3s;
+    }
+
+    #searchBar::placeholder {
+      color: rgba(255, 255, 255, 0.77);
+    }
+
+    #searchBar:focus {
+      border-color: #00ffff;
+      box-shadow: 0 0 8px rgba(0, 255, 255, 0.4);
+      background: rgba(0, 0, 0, 0.4);
+    }
+
+    .no-data-row {
+      text-align: center;
+      padding: 40px 0;
+      color: #ccc;
+      font-size: 16px;
     }
 
     .table-container {
@@ -117,30 +154,39 @@ $result = $conn->query("SELECT * FROM survey_files ORDER BY date_submitted DESC"
       width: 100%;
       border-collapse: collapse;
       color: #fff;
+      border: 1px solid #00bcd4;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    table th, table td {
+      border: 1px solid rgba(0, 255, 255, 0.3);
+      text-align: center;
+      padding: 12px;
     }
 
     table th {
       background-color: #00bcd4;
       color: #000;
-      padding: 12px;
-    }
-
-    table td {
-      padding: 12px;
-      border-bottom: 1px solid #333;
-    }
-
-    table th, table td {
-      text-align: center;
+      font-weight: bold;
     }
 
     table tr:nth-child(even) {
       background-color: #263646;
     }
 
+    table tr:nth-child(odd) {
+      background-color: #1f2b38;
+    }
+
     table tr:hover {
       background-color: #33475b;
     }
+    
+    table th, table td {
+      border: 1px solid #00ffff;
+    }
+
   </style>
 </head>
 <body>
@@ -150,7 +196,7 @@ $result = $conn->query("SELECT * FROM survey_files ORDER BY date_submitted DESC"
     <a href="admin_dashboard.php">Dashboard</a>
     <a href="admin_client_request.php">Client Requests</a>
     <a href="admin_client_updates.php">Client Updates</a>
-    <a href="transation_files.php" class="active">Survey Files</a>
+    <a href="transaction_files.php" class="active">Survey Files</a>
     <a href="admin_chat.php">Chat</a>
     <a href="index.php">Logout</a>
   </div>
@@ -160,7 +206,7 @@ $result = $conn->query("SELECT * FROM survey_files ORDER BY date_submitted DESC"
       <h1>Survey Files</h1>
       <div style="display: flex; gap: 10px; align-items: center;">
         <div class="search-box">
-          <input type="text" placeholder="Search survey files...">
+          <input type="text" id="searchBar" placeholder="Search survey files..." value="<?= htmlspecialchars($search) ?>">
         </div>
         <button onclick="openAddForm()" style="padding: 10px 16px; font-size: 16px; background-color: #00bcd4; color: #000; border: none; border-radius: 6px; cursor: pointer;">+</button>
       </div>
@@ -168,9 +214,10 @@ $result = $conn->query("SELECT * FROM survey_files ORDER BY date_submitted DESC"
 
 
     <div class="table-container">
-      <table>
+      <table id="surveyTable">
         <thead>
           <tr>
+            <th>Transaction #</th>
             <th>Client Name</th>
             <th>Survey Type</th>
             <th>Location</th>
@@ -200,6 +247,7 @@ $result = $conn->query("SELECT * FROM survey_files ORDER BY date_submitted DESC"
               ]));
 
               echo "<tr>";
+              echo "<td>" . htmlspecialchars($row['transaction_number'] ?? '—') . "</td>";
               echo "<td>" . htmlspecialchars($row['client_name']) . "</td>";
               echo "<td>" . htmlspecialchars($row['survey_type']) . "</td>";
               echo "<td>" . htmlspecialchars($row['location']) . "</td>";
@@ -234,11 +282,12 @@ $result = $conn->query("SELECT * FROM survey_files ORDER BY date_submitted DESC"
               echo "</tr>";
                 }
               } else {
-              echo "<tr><td colspan='6'>No survey files found.</td></tr>";
+              echo "<tr><td colspan='6' style='text-align:center; padding:40px 0; color:#ccc; font-size:16px;'>No Survey Files found</td></tr>";
               }
           ?>
         </tbody>
       </table>
+      <p id="noResultsMessage" style="text-align:center; color:rgba(255, 255, 255, 0.77);; font-size:16px; margin-top:20px; display:none;"></p>
     </div>
   </div>
 
@@ -248,6 +297,10 @@ $result = $conn->query("SELECT * FROM survey_files ORDER BY date_submitted DESC"
       <h2 style="color:#00bcd4; margin-bottom:20px;" id="formTitle">Add Survey File</h2>
       <form id="surveyForm">
         <input type="hidden" name="id" id="formId">
+        <div style="margin-bottom:12px;">
+          <label>Transaction #:</label><br>
+          <input type="text" name="transaction_number" id="transaction_number" required style="width:100%; padding:8px; border-radius:6px; border:none;">
+        </div>
         <div style="margin-bottom:12px;">
           <label>First Name:</label><br>
           <input type="text" name="first_name" id="first_name" required style="width:100%; padding:8px; border-radius:6px; border:none;">
@@ -285,6 +338,37 @@ $result = $conn->query("SELECT * FROM survey_files ORDER BY date_submitted DESC"
   </div>
 
   <script>
+
+  // Search functionality
+  document.addEventListener('DOMContentLoaded', function () {
+    const searchInput = document.getElementById('searchBar');
+    const table = document.getElementById('surveyTable');
+    const rows = table.querySelectorAll('tbody tr');
+    const noResultsMessage = document.getElementById('noResultsMessage');
+
+    searchInput.addEventListener('input', function () {
+      const query = this.value.toLowerCase().trim();
+      let matchCount = 0;
+
+      rows.forEach(row => {
+        const name = row.cells[0]?.textContent.toLowerCase() || '';
+        const type = row.cells[1]?.textContent.toLowerCase() || '';
+        const location = row.cells[2]?.textContent.toLowerCase() || '';
+
+        const match = name.includes(query) || type.includes(query) || location.includes(query);
+        row.style.display = match ? '' : 'none';
+        if (match) matchCount++;
+      });
+
+      if (query && matchCount === 0) {
+        noResultsMessage.textContent = `Search not found`;
+        noResultsMessage.style.display = 'block';
+      } else {
+        noResultsMessage.style.display = 'none';
+      }
+    });
+  });
+  
   function openAddForm() {
     document.getElementById('formTitle').innerText = 'Add Survey File';
     document.getElementById('surveyForm').reset();
@@ -295,6 +379,7 @@ $result = $conn->query("SELECT * FROM survey_files ORDER BY date_submitted DESC"
   function openEditForm(data) {
     document.getElementById('formTitle').innerText = 'Edit Survey File';
     document.getElementById('formId').value = data.id;
+    document.getElementById('transaction_number').value = data.transaction_number || '';
     document.getElementById('first_name').value = data.first_name;
     document.getElementById('last_name').value = data.last_name;
     document.getElementById('survey_type').value = data.survey_type;

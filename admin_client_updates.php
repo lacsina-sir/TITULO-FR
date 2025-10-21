@@ -393,6 +393,7 @@ function truncateWords($text, $limit = 20) {
           <tr>
             <th>Client Name</th>
             <th>Type</th>
+            <th>Purpose</th>
             <th>Transaction #</th>
             <th>Files</th>
             <th>Date Processed</th>
@@ -409,14 +410,44 @@ function truncateWords($text, $limit = 20) {
                 ? date('m/d/Y', strtotime($details['date_processed'])) 
                 : '—';
             ?>
+            <?php
+              // compute a display-friendly Purpose (mirror dashboard/tracking logic)
+              $displayPurpose = '';
+              if (!empty($details)) {
+                if (($details['type'] ?? $row['request_type']) === 'Land Survey') {
+                  if (!empty($details['ls_purpose'])) {
+                    if ($details['ls_purpose'] === 'Others' && !empty($details['ls_specify_text'])) {
+                      $displayPurpose = $details['ls_specify_text'];
+                    } elseif ($details['ls_purpose'] === 'Others') {
+                      $displayPurpose = '';
+                    } else {
+                      $displayPurpose = $details['ls_purpose'];
+                    }
+                  }
+                } elseif (($details['type'] ?? $row['request_type']) === 'Sketch Plan') {
+                  if (!empty($details['sp_use'])) {
+                    if ($details['sp_use'] === 'Others' && !empty($details['sp_specify_text'])) {
+                      $displayPurpose = $details['sp_specify_text'];
+                    } elseif ($details['sp_use'] === 'Others') {
+                      $displayPurpose = '';
+                    } else {
+                      $displayPurpose = $details['sp_use'];
+                    }
+                  }
+                }
+                if (empty($displayPurpose)) $displayPurpose = $details['purpose'] ?? '';
+              }
+            ?>
             <tr 
               data-id="<?= $row['id'] ?>" 
               data-name="<?= htmlspecialchars($row['client_name']) ?>"
               data-type="<?= htmlspecialchars($row['request_type']) ?>"
+              data-purpose="<?= htmlspecialchars($displayPurpose) ?>"
               data-details='<?= htmlspecialchars($row['details'], ENT_QUOTES) ?>'
             >
               <td><?= htmlspecialchars($row['client_name']) ?></td>
               <td><?= htmlspecialchars($row['request_type']) ?></td>
+              <td><?= htmlspecialchars($displayPurpose) ?></td>
               <td><?= htmlspecialchars($row['transaction_number']) ?></td>
 
               <!-- FILES COLUMN -->
@@ -451,7 +482,7 @@ function truncateWords($text, $limit = 20) {
               </td>
 
               <td><?= $dateProcessed ?></td>
-              <td><?= date('F j, Y, g:i a', strtotime($row['last_updated'])) ?></td>
+              <td><?= date('m/d/Y, g:i a', strtotime($row['last_updated'])) ?></td>
               <td data-full="<?= htmlspecialchars($row['status']) ?>" title="<?= htmlspecialchars($row['status']) ?>">
                 <?= truncateWords($row['status'], 20) ?>
               </td>
@@ -459,8 +490,10 @@ function truncateWords($text, $limit = 20) {
           <?php endwhile; ?>
         </tbody>
       </table>
+      <p id="noResultsMessage" style="text-align:center; color:rgba(255, 255, 255, 0.77);; font-size:16px; margin-top:20px; display:none;"></p>
+
     <?php else: ?>
-      <p class="container-one">No pending updates found.</p>
+      <p class="container-one">No Pending Updates found.</p>
     <?php endif; ?>
 
     <div class="button-row">
@@ -558,6 +591,10 @@ function truncateWords($text, $limit = 20) {
               <input type="text" id="editType" name="type">
             </div>
             <div class="field-group">
+              <label>Purpose</label>
+              <input type="text" id="editPurpose" name="purpose">
+            </div>
+            <div class="field-group">
               <label>Survey Plan</label>
               <input type="text" id="editSurveyPlanHidden" name="surveyplan">
             </div>
@@ -630,16 +667,46 @@ function truncateWords($text, $limit = 20) {
       return `${mm}/${dd}/${yyyy}`;
     }
 
+    // Format datetime (mm/dd/YYYY, h:mm am/pm)
+    function formatDateTime(input) {
+      let date;
+      if (!input) return '—';
+      if (input instanceof Date) date = input;
+      else date = new Date(String(input));
+      if (isNaN(date.getTime())) return String(input);
+      const mm = String(date.getMonth() + 1).padStart(2, '0');
+      const dd = String(date.getDate()).padStart(2, '0');
+      const yyyy = date.getFullYear();
+      let hours = date.getHours();
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      const ampm = hours >= 12 ? 'pm' : 'am';
+      hours = hours % 12;
+      hours = hours ? hours : 12; // the hour '0' should be '12'
+      return `${mm}/${dd}/${yyyy}, ${hours}:${minutes} ${ampm}`;
+    }
+
     // Live search
     if (searchInput) {
+      const noResultsMessage = document.getElementById('noResultsMessage');
       searchInput.addEventListener('input', function () {
         const query = this.value.toLowerCase().trim();
         const rows = document.querySelectorAll('#updatesTable tbody tr');
+        let matchCount = 0;
+
         rows.forEach(row => {
           const cells = Array.from(row.querySelectorAll('td'));
           const rowText = cells.map(td => td.textContent.toLowerCase()).join(' ');
-          row.style.display = rowText.includes(query) ? '' : 'none';
+          const match = rowText.includes(query);
+          row.style.display = match ? '' : 'none';
+          if (match) matchCount++;
         });
+
+        if (query && matchCount === 0) {
+          noResultsMessage.textContent = `Search not found`;
+          noResultsMessage.style.display = 'block';
+        } else {
+          noResultsMessage.style.display = 'none';
+        }
       });
     }
 
@@ -662,21 +729,50 @@ function truncateWords($text, $limit = 20) {
 
           document.getElementById('editId').value = id || '';
           document.getElementById('editDateProcessed').value = data.date_processed && data.date_processed !== '0000-00-00' ? data.date_processed : '';
-          document.getElementById('editClientName').value = [data.name, data.last_name].filter(Boolean).join(' ');
+          try {
+            let clientNameValue = '';
+            if (data.name && data.last_name) {
+              const nameStr = String(data.name);
+              const lastStr = String(data.last_name);
+              if (nameStr.endsWith(lastStr)) {
+                clientNameValue = nameStr;
+              } else {
+                clientNameValue = [nameStr, lastStr].filter(Boolean).join(' ');
+              }
+            } else {
+              clientNameValue = (data.name || data.last_name || '');
+            }
+            document.getElementById('editClientName').value = clientNameValue;
+          } catch (e) {
+            document.getElementById('editClientName').value = [data.name, data.last_name].filter(Boolean).join(' ');
+          }
           document.getElementById('editArea').value = data.ls_area || '';
           document.getElementById('editLot').value = data.ls_lot || '';
           document.getElementById('editLocation').value = data.ls_location || '';
+          document.getElementById('editPurpose').value = data.purpose || row.dataset.purpose || '';
           document.getElementById('editType').value = data.type || '';
           document.getElementById('editSurveyPlanHidden').value = data.surveyplan || '';
           document.getElementById('editDescriptionHidden').value = data.description || '';
-          document.getElementById('editStatus').value = row.cells[6] ? row.cells[6].getAttribute('data-full') : '';
+          // status is now in the last column (index 7)
+          document.getElementById('editStatus').value = row.cells[7] ? row.cells[7].getAttribute('data-full') : '';
 
           // Load admin updates from server for this id
           loadAdminUpdates(id);
 
-          // Restore any locally saved rows
+          // Restore any locally saved rows, but don't overwrite server-loaded rows.
           const saved = localStorage.getItem('updates_' + id);
-          adminBody.innerHTML = saved || '';
+          if (saved) {
+            try {
+              const placeholder = adminBody.querySelector('td[colspan]');
+              if (placeholder) {
+                adminBody.innerHTML = saved;
+              } else {
+                adminBody.insertAdjacentHTML('beforeend', saved);
+              }
+            } catch (e) {
+              adminBody.innerHTML = saved;
+            }
+          }
 
           modal.style.display = 'flex';
         });
@@ -696,8 +792,10 @@ function truncateWords($text, $limit = 20) {
           if (dbData && dbData.success && Array.isArray(dbData.updates) && dbData.updates.length) {
             dbData.updates.forEach(update => {
               const tr = document.createElement('tr');
+              const d = update.date ? (update.date.indexOf(',') === -1 ? update.date : update.date) : update.date;
+              const dateText = d ? formatDateTime(d) : '—';
               tr.innerHTML = `
-                <td>${update.date}</td>
+                <td>${dateText}</td>
                 <td>${update.status}</td>
                 <td>${update.remarks}</td>
                 <td>${update.expenses}</td>
@@ -715,10 +813,9 @@ function truncateWords($text, $limit = 20) {
     }
 
   function closeModal() { if (modal) modal.style.display = 'none'; }
-  // expose to global so inline onclick handlers work (Cancel button)
   window.closeModal = closeModal;
 
-    // Add new remark row (guard existence)
+    // Add new remark row
     const addRowBtn = document.querySelector('.addRowBtn');
     if (addRowBtn) {
       addRowBtn.addEventListener('click', () => {
@@ -732,8 +829,9 @@ function truncateWords($text, $limit = 20) {
         const currentId = editIdEl ? editIdEl.value : '';
         if (!status && !remarks && !expenses) return;
         const tr = document.createElement('tr');
+        const nowStr = formatDateTime(new Date());
         tr.innerHTML = `
-          <td>${new Date().toLocaleString()}</td>
+          <td>${nowStr}</td>
           <td>${status || '—'}</td>
           <td>${remarks || '—'}</td>
           <td>${expenses || '—'}</td>
@@ -768,7 +866,7 @@ function truncateWords($text, $limit = 20) {
       setTimeout(() => { n.style.top = '-60px'; n.style.opacity = '0'; setTimeout(() => n.remove(), 500); }, 3000);
     }
 
-    // Save button (guard existence)
+    // Save button
     if (editForm) {
       editForm.addEventListener('submit', e => {
         e.preventDefault();
@@ -800,11 +898,15 @@ function truncateWords($text, $limit = 20) {
               if (row) {
                 row.cells[0].textContent = data.updated_name || row.cells[0].textContent;
                 row.cells[1].textContent = formData.get('type') || row.cells[1].textContent;
-                row.cells[4].textContent = dateToReadable(data.updated_date_processed) || row.cells[4].textContent;
-                row.cells[5].textContent = dateToReadable(data.last_updated) || row.cells[5].textContent;
-                row.cells[6].textContent = truncateText(fullStatus, 20);
-                row.cells[6].setAttribute('data-full', fullStatus);
-                row.cells[6].title = fullStatus;
+                if (row.cells[2]) row.cells[2].textContent = formData.get('purpose') || row.dataset.purpose || row.cells[2].textContent;
+                row.cells[3].textContent = formData.get('transaction_number') || row.cells[3].textContent;
+                row.cells[5].textContent = dateToReadable(data.updated_date_processed) || row.cells[5].textContent;
+                row.cells[6].textContent = data.last_updated ? formatDateTime(data.last_updated) : row.cells[6].textContent;
+                if (row.cells[7]) {
+                  row.cells[7].textContent = truncateText(fullStatus, 20);
+                  row.cells[7].setAttribute('data-full', fullStatus);
+                  row.cells[7].title = fullStatus;
+                }
                 const oldData = JSON.parse(row.dataset.details || '{}');
                 const updatedDetails = Object.assign({}, oldData, {
                   name: formData.get('client_name') || oldData.name,
@@ -814,11 +916,14 @@ function truncateWords($text, $limit = 20) {
                   type: formData.get('type') || oldData.type,
                   surveyplan: formData.get('surveyplan') || oldData.surveyplan,
                   description: formData.get('description') || oldData.description,
-                  date_processed: formData.get('date_processed') || oldData.date_processed
+                  date_processed: formData.get('date_processed') || oldData.date_processed,
+                  purpose: formData.get('purpose') || oldData.purpose || row.dataset.purpose || ''
                 });
                 row.dataset.details = JSON.stringify(updatedDetails);
+                row.dataset.purpose = updatedDetails.purpose || '';
               }
               try { localStorage.removeItem('updates_' + id); } catch (e) { /* ignore storage errors */ }
+              loadAdminUpdates(id);
               showNotification('Saved successfully!', 'success');
               closeModal();
             } else {
@@ -845,7 +950,6 @@ function truncateWords($text, $limit = 20) {
 
     // Close controls
     document.getElementById('closeUpdateModal') && document.getElementById('closeUpdateModal').addEventListener('click', closeModal);
-    // also add simple click outside modal to close (guard modal)
     if (modal) {
       modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
     }

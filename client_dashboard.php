@@ -1,22 +1,24 @@
 <?php
 session_start();
 
-// Redirect if not logged in
 if (!isset($_SESSION['user_id'])) {
-    header("Location: login.php");
+    header("Location: login_register.php");
     exit();
 }
 
 
-// Get first and last name from session
 $first_name = $_SESSION['first_name'] ?? 'Client';
 $last_name = $_SESSION['last_name'] ?? '';
 
 include 'db_connection.php';
 $user_id = $_SESSION['user_id'] ?? 0;
 
-// Fetch submitted forms for this user
-$query = "SELECT * FROM client_forms WHERE user_id = ? ORDER BY created_at DESC";
+$query = "SELECT client_forms.*, (
+  SELECT remarks FROM progress_tracker pt WHERE pt.client_id = client_forms.id AND (pt.status = '' OR pt.status IS NULL) ORDER BY pt.updated_at DESC LIMIT 1
+) AS latest_admin_remark, (
+  SELECT status FROM progress_tracker pt2 WHERE pt2.client_id = client_forms.id AND (pt2.status IS NOT NULL AND pt2.status != '') ORDER BY pt2.updated_at DESC LIMIT 1
+) AS latest_tracking_status
+FROM client_forms WHERE user_id = ? ORDER BY created_at DESC";
 $stmt = $conn->prepare($query);
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
@@ -273,15 +275,20 @@ $result = $stmt->get_result();
             <h3><?php echo htmlspecialchars($row['type']); ?> Submitted</h3>
             <p>
               <?php
-                $status = strtolower($row['status']);
+                // prefer the latest tracking status if available (admin updates)
+                $latestTracking = $row['latest_tracking_status'] ?? '';
+                $statusToUse = !empty($latestTracking) ? strtolower($latestTracking) : strtolower($row['status']);
                 $statusColor = '#ffcc00';
                 $statusLabel = 'Waiting for approval';
-                if ($status === 'approved') {
+                if ($statusToUse === 'approved') {
                   $statusColor = '#00cc66';
                   $statusLabel = 'Approved';
-                } elseif ($status === 'rejected') {
+                } elseif ($statusToUse === 'rejected') {
                   $statusColor = '#ff3333';
                   $statusLabel = 'Rejected';
+                } elseif (!empty($latestTracking) && $statusToUse !== 'approved' && $statusToUse !== 'rejected') {
+                  $statusColor = '#3bbcff';
+                  $statusLabel = htmlspecialchars($row['latest_tracking_status']);
                 }
               ?>
               Status: <span style="color:<?php echo $statusColor; ?>; font-weight:bold;"> 
@@ -296,7 +303,7 @@ $result = $stmt->get_result();
 
               Date Submitted: <?php echo htmlspecialchars($row['date']); ?>
 
-              <?php if ($status === 'rejected' && !empty($row['rejection_reason'])): ?>
+        <?php if ($statusToUse === 'rejected' && !empty($row['rejection_reason'])): ?>
                   <br><span style="color:#ff3333;font-weight:bold;">
                       Reason: <?php echo htmlspecialchars($row['rejection_reason']); ?>
                   </span>
@@ -306,9 +313,9 @@ $result = $stmt->get_result();
                 <?php if (!empty($row['ls_location'])): ?><p>Location: <?php echo htmlspecialchars($row['ls_location']); ?></p><?php endif; ?>
                 <?php if (!empty($row['ls_area'])): ?><p>Lot Size / Area: <?php echo htmlspecialchars($row['ls_area']); ?> sqm</p><?php endif; ?>
                 <?php if (!empty($row['ls_purpose'])): ?>
-                    <p>Purpose: <?php echo ($row['ls_purpose'] === 'Others' && !empty($row['ls_specify_text'])) 
-                        ? htmlspecialchars($row['ls_specify_text']) 
-                        : (($row['ls_purpose'] === 'Others') ? '' : htmlspecialchars($row['ls_purpose'])); ?></p>
+          <p>Purpose: <?php echo ($row['ls_purpose'] === 'Others' && !empty($row['ls_specify_text'])) 
+            ? htmlspecialchars($row['ls_specify_text']) 
+            : (($row['ls_purpose'] === 'Others') ? htmlspecialchars($row['purpose'] ?? '') : htmlspecialchars($row['ls_purpose'])); ?></p>
                 <?php endif; ?>
 
               <?php elseif ($row['type'] === 'Sketch Plan'): ?>
@@ -368,7 +375,6 @@ $result = $stmt->get_result();
         chatbotModal.classList.add('active');
       };
 
-      // Listen for close message from iframe
       window.addEventListener('message', function(event) {
         if (event.data === 'closeChatbot') {
           chatbotModal.classList.remove('active');

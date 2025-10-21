@@ -10,12 +10,10 @@ if ($conn->connect_error) {
 // Accept form-encoded POST or raw JSON/urlencoded body from fetch
 $rawInput = file_get_contents('php://input');
 if (empty($_POST) && $rawInput) {
-    // try JSON
     $parsed = json_decode($rawInput, true);
     if (json_last_error() === JSON_ERROR_NONE && is_array($parsed)) {
         $_POST = array_merge($_POST, $parsed);
     } else {
-        // try parse_str for urlencoded bodies
         parse_str($rawInput, $parsedStr);
         if (is_array($parsedStr)) {
             $_POST = array_merge($_POST, $parsedStr);
@@ -54,11 +52,9 @@ $file_paths = '';
 if (!empty($form['file_paths'])) {
     $file_paths = $form['file_paths'];
 } elseif (!empty($_POST['file_paths'])) {
-    // if payload provided file_paths (array or json string)
     if (is_array($_POST['file_paths'])) {
         $file_paths = json_encode($_POST['file_paths']);
     } else {
-        // could be a JSON string or comma-separated
         $file_paths = trim($_POST['file_paths']);
     }
 }
@@ -85,7 +81,6 @@ if ($insert !== false) {
     }
     $insert->close();
 } else {
-    // If table doesn't have file_paths (column count mismatch), fall back to insert without file_paths
     if (stripos($conn->error, 'Column count') !== false || stripos($conn->error, 'Unknown column') !== false) {
         $insert = $conn->prepare($insert_sql_no_files);
         if ($insert === false) {
