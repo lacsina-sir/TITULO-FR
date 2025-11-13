@@ -38,7 +38,7 @@ $result = $conn->query($query);
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <link rel="icon" type="image/png" href="logos/logo_admin.png">
+  <link rel="icon" type="image/png" href="/logos/logo_admin.png">
   <title>Survey Files | Admin Panel</title>
   <style>
     body {
@@ -195,7 +195,7 @@ $result = $conn->query($query);
     <a href="admin_client_request.php">Client Requests</a>
     <a href="admin_client_updates.php">Client Updates</a>
     <a href="transaction_files.php" class="active">Survey Files</a>
-    <a href="admin_chat.php">Chat</a>
+    <a href="admin_contact.php">Chat</a>
     <a href="index.php">Logout</a>
   </div>
 

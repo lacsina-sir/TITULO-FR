@@ -61,7 +61,7 @@ if ($form) {
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <link rel="icon" type="image/png" href="logos/logo_admin.png">
+    <link rel="icon" type="image/png" href="/logos/logo_admin.png">
     <title>Client Requests – Admin</title>
     <style>
         body {
@@ -212,7 +212,7 @@ if ($form) {
         <a href="admin_client_request.php" class="active">Client Requests</a>
         <a href="admin_client_updates.php">Client Updates</a>
         <a href="transaction_files.php">Survey Files</a>
-        <a href="admin_chat.php">Chat</a>
+        <a href="admin_contact.php">Chat</a>
         <a href="index.php">Logout</a>
     </div>
 

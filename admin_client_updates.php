@@ -22,7 +22,7 @@ function truncateWords($text, $limit = 20) {
 <html lang="en">
   <head>
   <meta charset="UTF-8">
-  <link rel="icon" type="image/png" href="logos/logo_admin.png">
+  <link rel="icon" type="image/png" href="/logos/logo_admin.png">
   <title>Client Updates | Admin Panel</title>
     <style>
     body {
@@ -371,7 +371,7 @@ function truncateWords($text, $limit = 20) {
     <a href="admin_client_request.php">Client Requests</a>
     <a href="admin_client_updates.php" class="active">Client Updates</a>
     <a href="transaction_files.php">Survey Files</a>
-    <a href="admin_chat.php">Chat</a>
+    <a href="admin_contact.php">Chat</a>
     <a href="index.php">Logout</a>
   </div>
 

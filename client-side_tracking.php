@@ -124,7 +124,7 @@ if (isset($_POST['action']) && isset($_POST['id'])) {
 
 <head>
   <meta charset="UTF-8">
-  <link rel="icon" type="image/png" href="logos/logo_client.png">
+  <link rel="icon" type="image/png" href="/logos/logo_client.png">
   <title>Client Tracking | TITULO</title>
   <style>
     * {

@@ -1,18 +1,23 @@
 <?php
-session_start();
+include 'db_connection.php';
 
+// Send message if POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['message'])) {
-  $message = trim($_POST['message']);
-  if ($message !== '') {
-    require 'db_connection.php';
-    $user_id = $_SESSION['user_id'] ?? 1; 
-    $stmt = $conn->prepare("INSERT INTO chat_messages (sender, user_id, message) VALUES ('user', ?, ?)");
-    $stmt->bind_param("is", $user_id, $message);
-    $stmt->execute();
-    $stmt->close();
-    $conn->close();
-  }
-  exit;
+    $message = trim($_POST['message']);
+    if ($message !== '') {
+        $user_id = $_SESSION['user_id'] ?? 1;
+        $sender = $_POST['sender'] ?? 'user';
+
+        $stmt = $conn->prepare("INSERT INTO chat_messages (sender, user_id, message) VALUES (?, ?, ?)");
+        $stmt->bind_param("sis", $sender, $user_id, $message);
+        $stmt->execute();
+        $stmt->close();
+
+        echo json_encode(['success' => true]);
+    } else {
+        echo json_encode(['success' => false]);
+    }
+    exit;
 }
 ?>
 

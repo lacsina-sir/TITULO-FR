@@ -23,7 +23,7 @@ $clients = [];
     <html lang="en">
     <head>
         <meta charset="utf-8" />
-        <link rel="icon" type="image/png" href="logos/logo_admin.png">
+        <link rel="icon" type="image/png" href="/logos/logo_admin.png">
         <title>Admin Chat | Titulo</title>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <style>
@@ -295,7 +295,7 @@ $clients = [];
         <a href="admin_client_request.php">Client Requests</a>
         <a href="admin_client_updates.php">Client Updates</a>
         <a href="transaction_files.php">Survey Files</a>
-        <a href="admin_chat.php" class="active">Chat</a>
+        <a href="admin_contact.php" class="active">Chat</a>
         <a href="index.php">Logout</a>
     </div>
 

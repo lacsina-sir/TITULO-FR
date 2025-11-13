@@ -96,7 +96,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" type="image/png" href="logos/logo.png">
+    <link rel="icon" type="image/png" href="/logos/logo.png">
     <title>Compass North Land Surveying Services</title>
     <style>
         * {

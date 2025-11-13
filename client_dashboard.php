@@ -31,7 +31,7 @@ $result = $stmt->get_result();
 <head>
   <meta charset="UTF-8">
   <title>Client Dashboard | Titulo</title>
-  <link rel="icon" type="image/png" href="logos/logo_client.png">
+  <link rel="icon" type="image/png" href="/logos/logo_client.png">
   <style>
     * {
       margin: 0;
@@ -367,7 +367,7 @@ $result = $stmt->get_result();
 
 
       <div class="chatbot-modal" id="chatbotModal">
-        <iframe src="client_chatbot.php" class="chatbot-iframe"></iframe>
+        <iframe src="client_contact.php" class="chatbot-iframe"></iframe>
       </div>
 
       <script>

@@ -3,9 +3,6 @@ session_start();
 header('Content-Type: application/json');
 
 include 'db_connection.php';
-if ($conn->connect_error) {
-    die(json_encode(["success" => false, "error" => "DB connection failed"]));
-}
 
 $user_id = $_POST['user_id'] ?? ($_SESSION['user_id'] ?? 1);
 $sender = $_POST['sender'] ?? 'user';

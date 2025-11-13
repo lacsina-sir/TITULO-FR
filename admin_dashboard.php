@@ -43,7 +43,7 @@ try {
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <link rel="icon" type="image/png" href="logos/logo_admin.png">
+  <link rel="icon" type="image/png" href="/logos/logo_admin.png">
   <title>Admin Dashboard | Titulo</title>
   <style>
     body {

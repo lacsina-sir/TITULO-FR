@@ -3,10 +3,6 @@ header('Content-Type: application/json');
 
 include 'db_connection.php';
 
-if ($conn->connect_error) {
-    die(json_encode(["success" => false, "error" => "DB connection failed"]));
-}
-
 $user_id = $_GET['user_id'] ?? 0;
 
 $stmt = $conn->prepare("
