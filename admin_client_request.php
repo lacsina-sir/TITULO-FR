@@ -212,7 +212,7 @@ if ($form) {
         <a href="admin_client_request.php" class="active">Client Requests</a>
         <a href="admin_client_updates.php">Client Updates</a>
         <a href="transaction_files.php">Survey Files</a>
-        <a href="admin_contact.php">Chat</a>
+        <a href="admin_support.php">Chat</a>
         <a href="index.php">Logout</a>
     </div>
 

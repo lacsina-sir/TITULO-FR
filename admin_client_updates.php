@@ -371,7 +371,7 @@ function truncateWords($text, $limit = 20) {
     <a href="admin_client_request.php">Client Requests</a>
     <a href="admin_client_updates.php" class="active">Client Updates</a>
     <a href="transaction_files.php">Survey Files</a>
-    <a href="admin_contact.php">Chat</a>
+    <a href="admin_support.php">Chat</a>
     <a href="index.php">Logout</a>
   </div>
 
