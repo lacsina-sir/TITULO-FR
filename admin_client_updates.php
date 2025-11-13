@@ -1,14 +1,7 @@
 <?php
 // DB connection
-$host = "localhost";
-$user = "root";
-$password = "";
-$dbname = "titulo_db";
-
-$conn = new mysqli($host, $user, $password, $dbname);
-if ($conn->connect_error) {
-  die("Connection failed: " . $conn->connect_error);
-}
+session_start();
+require 'db_connection.php';
 
 // Fetch pending updates
 $sql = "SELECT * FROM pending_updates ORDER BY last_updated DESC";
@@ -29,6 +22,7 @@ function truncateWords($text, $limit = 20) {
 <html lang="en">
   <head>
   <meta charset="UTF-8">
+  <link rel="icon" type="image/png" href="logos/logo_admin.png">
   <title>Client Updates | Admin Panel</title>
     <style>
     body {

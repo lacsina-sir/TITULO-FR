@@ -1,7 +1,6 @@
 <?php
 session_start();
-$conn = new mysqli("localhost", "root", "", "titulo_db");
-if ($conn->connect_error) die("Connection failed: " . $conn->connect_error);
+require 'db_connection.php';
 
 $clientResult = $conn->query("
     SELECT u.id, CONCAT(u.first_name, ' ', u.last_name) AS name,
@@ -24,6 +23,7 @@ $clients = [];
     <html lang="en">
     <head>
         <meta charset="utf-8" />
+        <link rel="icon" type="image/png" href="logos/logo_admin.png">
         <title>Admin Chat | Titulo</title>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <style>

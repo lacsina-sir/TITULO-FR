@@ -2,12 +2,8 @@
 header('Content-Type: application/json; charset=utf-8');
 ob_clean();
 
-$host = "localhost";
-$user = "root";
-$pass = "";
-$db   = "titulo_db";
-
-$conn = new mysqli($host, $user, $pass, $db);
+session_start();
+require 'db_connection.php';
 
 if ($conn->connect_error) {
     echo json_encode(["success" => false, "error" => "Database connection failed"]);

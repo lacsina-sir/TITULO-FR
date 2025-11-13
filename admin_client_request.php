@@ -1,15 +1,8 @@
 <?php
 
 // CONNECT
-$host = "localhost";
-$user = "root";
-$pass = "";
-$db   = "titulo_db";
-
-$conn = new mysqli($host, $user, $pass, $db);
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
+session_start();
+include 'db_connection.php';
 
 // FETCH latest form submissions
 $sql = "
@@ -68,6 +61,7 @@ if ($form) {
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <link rel="icon" type="image/png" href="logos/logo_admin.png">
     <title>Client Requests – Admin</title>
     <style>
         body {

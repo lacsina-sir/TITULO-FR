@@ -1,11 +1,7 @@
 <?php
 // Database configuration
-$host     = "localhost";
-$dbname   = "titulo_db";
-$username = "root";
-$password = "";
-
 session_start();
+require 'db_connection.php';
 
 // Redirect if not logged in
 if (!isset($_SESSION['user_id'])) {
@@ -47,6 +43,7 @@ try {
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <link rel="icon" type="image/png" href="logos/logo_admin.png">
   <title>Admin Dashboard | Titulo</title>
   <style>
     body {

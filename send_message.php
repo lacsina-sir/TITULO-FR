@@ -2,7 +2,7 @@
 session_start();
 header('Content-Type: application/json');
 
-$conn = new mysqli("localhost", "root", "", "titulo_db");
+include 'db_connection.php';
 if ($conn->connect_error) {
     die(json_encode(["success" => false, "error" => "DB connection failed"]));
 }

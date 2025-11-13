@@ -1,11 +1,8 @@
 <?php
 header('Content-Type: application/json');
 
-$conn = new mysqli("localhost", "root", "", "titulo_db");
-if ($conn->connect_error) {
-    echo json_encode(['success' => false, 'error' => 'DB connection failed']);
-    exit;
-}
+session_start();
+require 'db_connection.php';
 
 // Accept form-encoded POST or raw JSON/urlencoded body from fetch
 $rawInput = file_get_contents('php://input');

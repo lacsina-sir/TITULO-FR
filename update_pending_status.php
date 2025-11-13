@@ -6,16 +6,8 @@ if (ob_get_level()) ob_clean();
 
 date_default_timezone_set('Asia/Manila');
 
-$host = "localhost";
-$user = "root";
-$pass = "";
-$db   = "titulo_db";
-
-$conn = new mysqli($host, $user, $pass, $db);
-if ($conn->connect_error) {
-    echo json_encode(["success" => false, "error" => "Database connection failed"]);
-    exit;
-}
+session_start();
+require 'db_connection.php';
 
 $id = $_POST['id'] ?? '';
 $client_name = $_POST['client_name'] ?? '';

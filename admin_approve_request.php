@@ -2,11 +2,8 @@
 header('Content-Type: application/json');
 
 // Connect to database
-$conn = new mysqli("localhost", "root", "", "titulo_db");
-if ($conn->connect_error) {
-    echo json_encode(['success' => false, 'error' => 'DB connection failed']);
-    exit;
-}
+session_start();
+require 'db_connection.php';
 
 if (!isset($_POST['id'])) {
     echo json_encode(['success' => false, 'error' => 'Missing ID']);

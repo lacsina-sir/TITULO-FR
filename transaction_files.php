@@ -1,10 +1,7 @@
 <?php
 // Database connection
-$host = "localhost";
-$user = "root";
-$pass = "";
-$db = "titulo_db";
-$conn = new mysqli($host, $user, $pass, $db);
+session_start();
+include 'db_connection.php';
 
 if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
@@ -41,6 +38,7 @@ $result = $conn->query($query);
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <link rel="icon" type="image/png" href="logos/logo_admin.png">
   <title>Survey Files | Admin Panel</title>
   <style>
     body {

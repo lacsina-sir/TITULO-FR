@@ -8,6 +8,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <link rel="icon" type="image/png" href="logos/logo_client.png">
   <title>Client Files | Titulo</title>
   <style>
     * {

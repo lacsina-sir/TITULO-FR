@@ -4,8 +4,7 @@ session_start();
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['message'])) {
   $message = trim($_POST['message']);
   if ($message !== '') {
-    $conn = new mysqli("localhost", "root", "", "titulo_db");
-    if ($conn->connect_error) die("Connection failed: " . $conn->connect_error);
+    require 'db_connection.php';
     $user_id = $_SESSION['user_id'] ?? 1; 
     $stmt = $conn->prepare("INSERT INTO chat_messages (sender, user_id, message) VALUES ('user', ?, ?)");
     $stmt->bind_param("is", $user_id, $message);
