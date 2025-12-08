@@ -1,5 +1,3 @@
-[![Live Demo](https://img.shields.io/badge/🌐_Live%20Demo-Visit%20Now-blue?style=for-the-badge)](https://titulo.infinityfreeapp.com/)
-
 # TITULO  
 *A digital platform specializing in providing accurate land surveys and secure documentation services*
 
